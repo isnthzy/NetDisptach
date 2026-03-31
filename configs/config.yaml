@@ -16,7 +16,18 @@ nics:
 egress_policies: []
 routing:
     default_egress: ""
-    rules: []
+    rules:
+      - id: "default-catch-all"
+        name: "默认规则"
+        priority: 100
+        enabled: true
+        list_type: "none"
+        domains:
+          - "*"
+        cidrs: []
+        ports: []
+        action: "forward"
+        egress_id: ""
 api:
     bind: 127.0.0.1
     port: 9090
@@ -24,7 +35,3 @@ api:
         enabled: false
         username: ""
         password: ""
-web:
-    enabled: false
-    bind: ""
-    port: 0

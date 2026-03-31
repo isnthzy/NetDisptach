@@ -2,7 +2,7 @@ import { Form, Card, Input, InputNumber, Switch, Select, message, Divider, Row, 
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { configApi, nicsApi, statusApi } from '../services/api'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 
 interface SOCKSUser {
   username: string
@@ -13,6 +13,7 @@ function Settings() {
   const [form] = Form.useForm()
   const queryClient = useQueryClient()
   const [serverEnabled, setServerEnabled] = useState(true)
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: config, isLoading } = useQuery({
     queryKey: ['config'],
@@ -22,12 +23,14 @@ function Settings() {
   const { data: nics } = useQuery({
     queryKey: ['nics'],
     queryFn: nicsApi.list,
+    staleTime: 30000, // Cache NICs for 30 seconds
   })
 
   const { data: status } = useQuery({
     queryKey: ['status'],
     queryFn: statusApi.get,
-    refetchInterval: 5000,
+    staleTime: 2000, // Consider status fresh for 2 seconds
+    refetchOnWindowFocus: true, // Only refetch when user focuses window
   })
 
   const updateMutation = useMutation({
@@ -50,33 +53,56 @@ function Settings() {
     }
   }, [config, form])
 
-  // Real-time config update function
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Real-time config update function with debouncing
   // Uses the original config from API instead of form values to preserve all fields
-  const updateConfig = (path: string, value: any) => {
+  const updateConfig = useCallback((path: string, value: any) => {
     if (!config) return
 
-    // Deep clone the original config to preserve all fields (egress, routing, etc.)
-    const updated = JSON.parse(JSON.stringify(config))
-
-    // Update only the specific path
-    const pathParts = path.split('.')
-    let current: any = updated
-    for (let i = 0; i < pathParts.length - 1; i++) {
-      current = current[pathParts[i]]
+    // Clear any pending update
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current)
     }
-    current[pathParts[pathParts.length - 1]] = value
 
-    updateMutation.mutate(updated)
-  }
+    // Debounce the update
+    updateTimeoutRef.current = setTimeout(() => {
+      // Use structuredClone for better performance than JSON.parse/stringify
+      const updated = structuredClone(config)
+
+      // Update only the specific path
+      const pathParts = path.split('.')
+      let current: any = updated
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        current = current[pathParts[i]]
+      }
+      current[pathParts[pathParts.length - 1]] = value
+
+      updateMutation.mutate(updated)
+    }, 300) // 300ms debounce
+  }, [config, updateMutation])
 
   // Update SOCKS5 auth users
-  const updateSOCKS5Users = (users: SOCKSUser[]) => {
+  const updateSOCKS5Users = useCallback((users: SOCKSUser[]) => {
     if (!config) return
 
-    const updated = JSON.parse(JSON.stringify(config))
-    updated.server.socks5.auth.users = users
-    updateMutation.mutate(updated)
-  }
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current)
+    }
+
+    updateTimeoutRef.current = setTimeout(() => {
+      const updated = structuredClone(config)
+      updated.server.socks5.auth.users = users
+      updateMutation.mutate(updated)
+    }, 300)
+  }, [config, updateMutation])
 
   if (isLoading) return null
 
@@ -97,7 +123,7 @@ function Settings() {
                 if (!checked) {
                   // 关闭总开关时，同步关闭两个端口的开关
                   if (config) {
-                    const updated = JSON.parse(JSON.stringify(config))
+                    const updated = structuredClone(config)
                     updated.server.enabled = false
                     updated.server.http.enabled = false
                     updated.server.socks5.enabled = false
