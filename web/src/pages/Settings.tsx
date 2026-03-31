@@ -235,7 +235,22 @@ function Settings() {
                               <Form.Item
                                 {...restField}
                                 name={[name, 'username']}
-                                rules={[{ required: true, message: '请输入用户名' }]}
+                                rules={[
+                                  { required: true, message: '请输入用户名' },
+                                  {
+                                    validator: (_, value) => {
+                                      if (!value) return Promise.resolve()
+                                      const users = getFieldValue(['server', 'socks5', 'auth', 'users']) || []
+                                      const duplicateIndex = users.findIndex((u: any, idx: number) =>
+                                        u?.username === value && idx !== name
+                                      )
+                                      if (duplicateIndex >= 0) {
+                                        return Promise.reject('用户名已存在')
+                                      }
+                                      return Promise.resolve()
+                                    }
+                                  }
+                                ]}
                               >
                                 <Input
                                   placeholder="用户名"

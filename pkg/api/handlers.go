@@ -49,6 +49,20 @@ func (s *Server) createEgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 获取有效网卡列表
+	nics := s.nicManager.List()
+	validNICs := make([]string, len(nics))
+	for i, nic := range nics {
+		validNICs[i] = nic.Name
+	}
+
+	// 验证策略
+	existingPolicies := s.egressMgr.List()
+	if err := egress.ValidatePolicy(&policy, existingPolicies, "", validNICs); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	s.egressMgr.Add(&policy)
 	s.syncEgressToConfig()
 	if err := s.saveConfig(); err != nil {
@@ -69,6 +83,21 @@ func (s *Server) updateEgress(w http.ResponseWriter, r *http.Request) {
 	}
 
 	policy.ID = id
+
+	// 获取有效网卡列表
+	nics := s.nicManager.List()
+	validNICs := make([]string, len(nics))
+	for i, nic := range nics {
+		validNICs[i] = nic.Name
+	}
+
+	// 验证策略（排除自身 ID）
+	existingPolicies := s.egressMgr.List()
+	if err := egress.ValidatePolicy(&policy, existingPolicies, id, validNICs); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	s.egressMgr.Add(&policy)
 	s.syncEgressToConfig()
 	if err := s.saveConfig(); err != nil {
@@ -123,6 +152,13 @@ func (s *Server) createRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 验证规则
+	existingRules := s.routerMgr.ListRules()
+	if err := router.ValidateRule(rule, existingRules, ""); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if err := rule.CompileCIDRs(); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid CIDR: "+err.Error())
 		return
@@ -148,6 +184,14 @@ func (s *Server) updateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rule.ID = id
+
+	// 验证规则（排除自身 ID）
+	existingRules := s.routerMgr.ListRules()
+	if err := router.ValidateRule(rule, existingRules, id); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if err := rule.CompileCIDRs(); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid CIDR: "+err.Error())
 		return
@@ -298,10 +342,19 @@ func (s *Server) validateConfig(cfg *config.Config) error {
 	}
 
 	// Port conflict check
-	if cfg.Server.HTTP.Enabled && cfg.Server.SOCKS5.Enabled {
-		if cfg.Server.HTTP.Port == cfg.Server.SOCKS5.Port {
-			return fmt.Errorf("HTTP and SOCKS5 cannot use the same port: %d", cfg.Server.HTTP.Port)
+	ports := make(map[int]string)
+	if cfg.Server.HTTP.Enabled {
+		ports[cfg.Server.HTTP.Port] = "HTTP"
+	}
+	if cfg.Server.SOCKS5.Enabled {
+		if existing, ok := ports[cfg.Server.SOCKS5.Port]; ok {
+			return fmt.Errorf("SOCKS5 端口与 %s 端口冲突: %d", existing, cfg.Server.SOCKS5.Port)
 		}
+		ports[cfg.Server.SOCKS5.Port] = "SOCKS5"
+	}
+	// API 端口冲突检查
+	if existing, ok := ports[cfg.API.Port]; ok {
+		return fmt.Errorf("API 端口与 %s 端口冲突: %d", existing, cfg.API.Port)
 	}
 
 	return nil
@@ -390,6 +443,7 @@ func (s *Server) applyRoutingConfig(cfg *config.RoutingConfig) {
 	for i, r := range cfg.Rules {
 		rules[i] = router.Rule{
 			ID:          r.ID,
+			Name:        r.Name,
 			Priority:    r.Priority,
 			Enabled:     r.Enabled,
 			ListType:    router.ListType(r.ListType),
@@ -484,6 +538,7 @@ func (s *Server) syncRulesToConfig() {
 	for i, r := range rules {
 		s.config.Routing.Rules[i] = config.Rule{
 			ID:          r.ID,
+			Name:        r.Name,
 			Priority:    r.Priority,
 			Enabled:     r.Enabled,
 			ListType:    string(r.ListType),
@@ -522,9 +577,17 @@ func (s *Server) importRuleFromURL(w http.ResponseWriter, r *http.Request) {
 		req.Name = "Imported from URL"
 	}
 
+	// 验证优先级
+	tempRule := router.Rule{Priority: req.Priority, Name: req.Name}
+	existingRules := s.routerMgr.ListRules()
+	if err := router.ValidateRule(tempRule, existingRules, ""); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	result, err := s.importer.ImportFromURL(req.URL, req.Name, req.EgressID, req.Priority, req.Enabled)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Import failed: "+err.Error())
+		respondError(w, http.StatusBadRequest, "Import failed: "+err.Error())
 		return
 	}
 
@@ -562,10 +625,18 @@ func (s *Server) importRuleFromFile(w http.ResponseWriter, r *http.Request) {
 	fmt.Sscanf(r.FormValue("priority"), "%d", &priority)
 	enabled := r.FormValue("enabled") != "false"
 
+	// 验证优先级
+	tempRule := router.Rule{Priority: priority, Name: name}
+	existingRules := s.routerMgr.ListRules()
+	if err := router.ValidateRule(tempRule, existingRules, ""); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// Import from reader
 	result, err := s.importer.ImportFromReader(file, name, "file-upload", egressID, priority, enabled)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Import failed: "+err.Error())
+		respondError(w, http.StatusBadRequest, "Import failed: "+err.Error())
 		return
 	}
 

@@ -92,6 +92,11 @@ func (i *Importer) createImportedRule(name string, domains []string, source, egr
 		return nil, fmt.Errorf("no valid domains found")
 	}
 
+	// 验证优先级范围
+	if priority < MinPriority || priority > MaxPriority {
+		return nil, fmt.Errorf("优先级必须在 %d-%d 之间，当前值: %d", MinPriority, MaxPriority, priority)
+	}
+
 	// Generate a unique ID
 	id := generateImportID()
 

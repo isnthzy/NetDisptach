@@ -90,6 +90,7 @@ type RoutingConfig struct {
 // Rule represents a routing rule
 type Rule struct {
 	ID          string   `yaml:"id" json:"id"`
+	Name        string   `yaml:"name" json:"name"`
 	Priority    int      `yaml:"priority" json:"priority"`
 	Enabled     bool     `yaml:"enabled" json:"enabled"`
 	ListType    string   `yaml:"list_type" json:"list_type"` // "none", "whitelist", "blacklist"
@@ -141,7 +142,18 @@ func DefaultConfig() *Config {
 		Egress: []EgressPolicy{},
 		Routing: RoutingConfig{
 			DefaultEgress: "",
-			Rules:        []Rule{},
+			Rules: []Rule{
+				{
+					ID:       "default-catch-all",
+					Name:     "默认规则",
+					Priority: 100,
+					Enabled:  true,
+					ListType: "none",
+					Domains:  []string{"*"},
+					Action:   "forward",
+					EgressID: "", // 运行时自动选择默认出口
+				},
+			},
 		},
 		API: APIConfig{
 			Bind: "127.0.0.1",
