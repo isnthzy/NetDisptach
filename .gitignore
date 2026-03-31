@@ -1,0 +1,53 @@
+# Dependencies
+web/node_modules/
+vendor/
+
+# Build outputs
+bin/
+*.exe
+netdispatch
+netdispatch-console
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.stackdump
+
+# Logs
+*.log
+kernel.log
+kernel.err
+logs/
+
+# Local config (keep template)
+configs/config.local.yaml
+
+# Temporary files
+*.tmp
+*.bak
+*.temp
+*~
+
+# Test coverage
+coverage.out
+*.coverprofile
+
+# Debug
+debug
+__debug_bin*
+
+# Assets (generated)
+assets/icon.txt
+
+# Frontend build cache
+web/.vite/
+web/dist/
