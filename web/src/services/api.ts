@@ -22,6 +22,12 @@ export const rulesApi = {
   create: (data: any) => api.post('/rules', data).then(r => r.data),
   update: (id: string, data: any) => api.put(`/rules/${id}`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/rules/${id}`),
+  importFromUrl: (data: { name: string; url: string; egress_id: string; priority: number; enabled: boolean }) =>
+    api.post('/rules/import', data).then(r => r.data),
+  importFromFile: (formData: FormData) =>
+    api.post('/rules/import/file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data),
 }
 
 export const connectionsApi = {

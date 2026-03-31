@@ -43,11 +43,12 @@ type Server struct {
 	configPath  string
 	configMu    sync.RWMutex
 	wsHub       *ws.Hub
+	importer    *router.Importer
 }
 
 // NewServer creates a new API server
 func NewServer(cfg *config.Config, nicManager *nic.Manager, egressMgr *egress.Manager, routerMgr *router.Manager, connMgr *connmgr.Manager, proxyServer *proxy.Server) *Server {
-	return &Server{
+	s := &Server{
 		nicManager:  nicManager,
 		egressMgr:   egressMgr,
 		routerMgr:   routerMgr,
@@ -57,6 +58,8 @@ func NewServer(cfg *config.Config, nicManager *nic.Manager, egressMgr *egress.Ma
 		configPath:  "configs/config.yaml",
 		wsHub:       ws.NewHub(),
 	}
+	s.importer = router.NewImporter(routerMgr)
+	return s
 }
 
 // SetWSHub sets the WebSocket hub
@@ -98,6 +101,8 @@ func (s *Server) Start() error {
 	routerMux.HandleFunc("/api/v1/rules", s.createRule).Methods("POST")
 	routerMux.HandleFunc("/api/v1/rules/{id}", s.updateRule).Methods("PUT")
 	routerMux.HandleFunc("/api/v1/rules/{id}", s.deleteRule).Methods("DELETE")
+	routerMux.HandleFunc("/api/v1/rules/import", s.importRuleFromURL).Methods("POST")
+	routerMux.HandleFunc("/api/v1/rules/import/file", s.importRuleFromFile).Methods("POST")
 
 	routerMux.HandleFunc("/api/v1/connections", s.listConnections).Methods("GET")
 	routerMux.HandleFunc("/api/v1/connections/recent", s.getRecentConnections).Methods("GET")

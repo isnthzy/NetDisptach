@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"runtime"
 
@@ -388,19 +389,25 @@ func (s *Server) applyRoutingConfig(cfg *config.RoutingConfig) {
 	rules := make([]router.Rule, len(cfg.Rules))
 	for i, r := range cfg.Rules {
 		rules[i] = router.Rule{
-			ID:       r.ID,
-			Priority: r.Priority,
-			Enabled:  r.Enabled,
-			ListType: router.ListType(r.ListType),
-			Domains:  r.Domains,
-			CIDRs:    r.CIDRs,
-			Ports:    r.Ports,
-			Action:   r.Action,
-			EgressID: r.EgressID,
+			ID:          r.ID,
+			Priority:    r.Priority,
+			Enabled:     r.Enabled,
+			ListType:    router.ListType(r.ListType),
+			Domains:     r.Domains,
+			CIDRs:       r.CIDRs,
+			Ports:       r.Ports,
+			Action:      r.Action,
+			EgressID:    r.EgressID,
+			Source:      r.Source,
+			DomainCount: r.DomainCount,
 		}
 		// Compile CIDRs for each rule
 		if err := rules[i].CompileCIDRs(); err != nil {
 			log.Warn().Err(err).Str("rule", r.ID).Msg("Failed to compile CIDRs for rule")
+		}
+		// Build domain tree for rules with many domains
+		if len(r.Domains) > 0 {
+			rules[i].BuildDomainTree()
 		}
 	}
 	s.routerMgr.SetRules(rules)
@@ -476,15 +483,102 @@ func (s *Server) syncRulesToConfig() {
 	s.config.Routing.Rules = make([]config.Rule, len(rules))
 	for i, r := range rules {
 		s.config.Routing.Rules[i] = config.Rule{
-			ID:       r.ID,
-			Priority: r.Priority,
-			Enabled:  r.Enabled,
-			ListType: string(r.ListType),
-			Domains:  r.Domains,
-			CIDRs:    r.CIDRs,
-			Ports:    r.Ports,
-			Action:   r.Action,
-			EgressID: r.EgressID,
+			ID:          r.ID,
+			Priority:    r.Priority,
+			Enabled:     r.Enabled,
+			ListType:    string(r.ListType),
+			Domains:     r.Domains,
+			CIDRs:       r.CIDRs,
+			Ports:       r.Ports,
+			Action:      r.Action,
+			EgressID:    r.EgressID,
+			Source:      r.Source,
+			DomainCount: r.DomainCount,
 		}
 	}
+}
+
+// importRuleFromURL imports a domain list from a URL
+func (s *Server) importRuleFromURL(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name     string `json:"name"`
+		URL      string `json:"url"`
+		EgressID string `json:"egress_id"`
+		Priority int    `json:"priority"`
+		Enabled  bool   `json:"enabled"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.URL == "" {
+		respondError(w, http.StatusBadRequest, "URL is required")
+		return
+	}
+
+	if req.Name == "" {
+		req.Name = "Imported from URL"
+	}
+
+	result, err := s.importer.ImportFromURL(req.URL, req.Name, req.EgressID, req.Priority, req.Enabled)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Import failed: "+err.Error())
+		return
+	}
+
+	// Sync to config
+	s.syncRulesToConfig()
+	if err := s.saveConfig(); err != nil {
+		log.Error().Err(err).Msg("Failed to save config after importing rule")
+	}
+
+	respondJSON(w, http.StatusCreated, result)
+}
+
+// importRuleFromFile imports a domain list from an uploaded file
+func (s *Server) importRuleFromFile(w http.ResponseWriter, r *http.Request) {
+	// Parse multipart form
+	if err := r.ParseMultipartForm(32 << 20); err != nil { // 32MB max
+		respondError(w, http.StatusBadRequest, "Failed to parse form: "+err.Error())
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "File is required")
+		return
+	}
+	defer file.Close()
+
+	name := r.FormValue("name")
+	if name == "" {
+		name = "Imported from file"
+	}
+
+	egressID := r.FormValue("egress_id")
+	priority := 0
+	fmt.Sscanf(r.FormValue("priority"), "%d", &priority)
+	enabled := r.FormValue("enabled") != "false"
+
+	// Import from reader
+	result, err := s.importer.ImportFromReader(file, name, "file-upload", egressID, priority, enabled)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Import failed: "+err.Error())
+		return
+	}
+
+	// Sync to config
+	s.syncRulesToConfig()
+	if err := s.saveConfig(); err != nil {
+		log.Error().Err(err).Msg("Failed to save config after importing rule")
+	}
+
+	respondJSON(w, http.StatusCreated, result)
+}
+
+// importRuleFromReader is a helper for testing
+func (s *Server) importRuleFromReader(reader io.Reader, name, source, egressID string, priority int, enabled bool) (*router.ImportResult, error) {
+	return s.importer.ImportFromReader(reader, name, source, egressID, priority, enabled)
 }

@@ -27,19 +27,32 @@ type Rule struct {
 	EgressID    string   `json:"egress_id"`
 	Description string   `json:"description"`
 
-	cidrNets []*net.IPNet
+	// Fields for imported domain lists
+	Source      string `json:"source,omitempty"`       // Import source (URL or file path)
+	DomainCount int    `json:"domain_count,omitempty"` // Number of domains in the list
+
+	// Internal fields
+	cidrNets   []*net.IPNet
+	domainTree *DomainTree // Optimized tree for large domain lists
 }
 
 // Match checks if the target matches this rule
 // All specified conditions (Domains, CIDRs, Ports) must match (AND logic)
 func (r *Rule) Match(host string, port int) bool {
 	// If domains are specified, host must match one of them
-	if len(r.Domains) > 0 {
+	if len(r.Domains) > 0 || r.domainTree != nil {
 		matched := false
-		for _, domain := range r.Domains {
-			if matchDomain(host, domain) {
-				matched = true
-				break
+
+		// Prefer optimized tree structure for large domain lists
+		if r.domainTree != nil {
+			matched = r.domainTree.Match(host)
+		} else {
+			// Fallback to linear search for small lists
+			for _, domain := range r.Domains {
+				if matchDomain(host, domain) {
+					matched = true
+					break
+				}
 			}
 		}
 		if !matched {
@@ -110,4 +123,25 @@ func matchDomain(target, pattern string) bool {
 	}
 
 	return target == pattern
+}
+
+// BuildDomainTree builds an optimized domain tree from the Domains slice.
+// This should be called after loading a rule with many domains for efficient matching.
+func (r *Rule) BuildDomainTree() {
+	if len(r.Domains) == 0 {
+		return
+	}
+
+	r.domainTree = NewDomainTree()
+	r.domainTree.AddMultiple(r.Domains)
+}
+
+// ClearDomainTree removes the domain tree to free memory.
+func (r *Rule) ClearDomainTree() {
+	r.domainTree = nil
+}
+
+// HasDomainTree returns true if the rule has an optimized domain tree.
+func (r *Rule) HasDomainTree() bool {
+	return r.domainTree != nil
 }
