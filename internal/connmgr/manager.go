@@ -2,11 +2,28 @@ package connmgr
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+// Buffer pool for traffic copy operations
+var bufferPool = sync.Pool{
+	New: func() any {
+		buf := make([]byte, 32*1024)
+		return &buf
+	},
+}
+
+func getBuffer() *[]byte {
+	return bufferPool.Get().(*[]byte)
+}
+
+func putBuffer(buf *[]byte) {
+	bufferPool.Put(buf)
+}
 
 // Connection represents an active proxy connection
 type Connection struct {
@@ -332,19 +349,7 @@ func CopyTraffic(client, target net.Conn) (int64, int64) {
 }
 
 func ioCopy(dst, src net.Conn) (int64, error) {
-	buf := make([]byte, 32*1024)
-	var total int64
-	for {
-		n, err := src.Read(buf)
-		if n > 0 {
-			written, err2 := dst.Write(buf[:n])
-			total += int64(written)
-			if err2 != nil {
-				return total, err2
-			}
-		}
-		if err != nil {
-			return total, err
-		}
-	}
+	buf := getBuffer()
+	defer putBuffer(buf)
+	return io.CopyBuffer(dst, src, *buf)
 }

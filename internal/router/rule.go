@@ -33,7 +33,8 @@ type Rule struct {
 
 	// Internal fields
 	cidrNets   []*net.IPNet
-	domainTree *DomainTree // Optimized tree for large domain lists
+	domainTree *DomainTree  // Optimized tree for large domain lists
+	portMap    map[int]bool // Compiled port set for O(1) lookup
 }
 
 // Match checks if the target matches this rule
@@ -80,15 +81,22 @@ func (r *Rule) Match(host string, port int) bool {
 
 	// If ports are specified, port must match one of them
 	if len(r.Ports) > 0 {
-		matched := false
-		for _, p := range r.Ports {
-			if p == port {
-				matched = true
-				break
+		if r.portMap != nil {
+			if !r.portMap[port] {
+				return false
 			}
-		}
-		if !matched {
-			return false
+		} else {
+			// Fallback for uncompiled rules
+			matched := false
+			for _, p := range r.Ports {
+				if p == port {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				return false
+			}
 		}
 	}
 
@@ -105,6 +113,13 @@ func (r *Rule) CompileCIDRs() error {
 			return err
 		}
 		r.cidrNets = append(r.cidrNets, ipNet)
+	}
+	// Also compile port map
+	if len(r.Ports) > 0 {
+		r.portMap = make(map[int]bool, len(r.Ports))
+		for _, p := range r.Ports {
+			r.portMap[p] = true
+		}
 	}
 	return nil
 }
