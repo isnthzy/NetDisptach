@@ -8,7 +8,8 @@ VERSION ?= 0.1.0
 API_PORT ?= 9090
 
 # Linker flags for embedding build info (must use string types for -X)
-LDFLAGS := -X "main.version=$(VERSION)" -X "main.defaultAPIPortStr=$(API_PORT)"
+# -H=windowsgui: Build as GUI application (no console window on Windows)
+LDFLAGS := -H=windowsgui -X "main.version=$(VERSION)" -X "main.defaultAPIPortStr=$(API_PORT)"
 
 # Detect OS
 UNAME_S := $(shell uname -s 2>/dev/null || echo "Windows")
@@ -17,11 +18,6 @@ all: build
 
 build: web-build
 	go build -ldflags "$(LDFLAGS)" -o bin/$(BINARY_NAME).exe $(MAIN_PATH)
-	@# Generate Windows launcher script (optional, for convenience)
-	@echo '@echo off' > bin/启动NetDispatch.bat
-	@echo 'cd /d "%%~dp0"' >> bin/启动NetDispatch.bat
-	@echo 'start "" $(BINARY_NAME).exe start' >> bin/启动NetDispatch.bat
-	@echo "Windows launcher script created: bin/启动NetDispatch.bat"
 
 run:
 	go run $(MAIN_PATH)/main.go start -c configs/config.yaml
@@ -57,9 +53,6 @@ web-build:
 # Example: make build-custom API_PORT=8080
 build-custom: web-build
 	go build -ldflags "$(LDFLAGS)" -o bin/$(BINARY_NAME)-port$(API_PORT).exe $(MAIN_PATH)
-	@echo '@echo off' > bin/启动NetDispatch-port$(API_PORT).bat
-	@echo 'cd /d "%%~dp0"' >> bin/启动NetDispatch-port$(API_PORT).bat
-	@echo 'start "" $(BINARY_NAME)-port$(API_PORT).exe start' >> bin/启动NetDispatch-port$(API_PORT).bat
 
 docker-build:
 	docker build -t netdispatch:latest -f deployments/docker/Dockerfile .
