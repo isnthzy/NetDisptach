@@ -9,6 +9,9 @@ set -e
 # Get version from argument or use default
 VERSION=${1:-dev}
 
+# Remove 'v' prefix if present for ldflags
+VERSION_NUM=${VERSION#v}
+
 # Get git info
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -26,7 +29,7 @@ cd ..
 # Build backend with version info
 echo "Building backend..."
 go build -ldflags "-s -w \
-    -X netdispatch/pkg/version.Version=${VERSION} \
+    -X netdispatch/pkg/version.Version=${VERSION_NUM} \
     -X netdispatch/pkg/version.GitCommit=${GIT_COMMIT} \
     -X netdispatch/pkg/version.BuildDate=${BUILD_DATE}" \
     -o netdispatch.exe ./cmd/netdispatch

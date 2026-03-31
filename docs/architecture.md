@@ -1,5 +1,13 @@
 # NetDispatch 架构设计文档
 
+> **AI 助手指南**：本项目提供了 `AGENTS.md` 文件，包含项目上下文、开发指南和常见问题解决方案。
+>
+> **重要**：在开始开发之前，请先阅读 `AGENTS.md` 文件以快速理解项目。
+>
+> 如果你使用的是 Claude Code，可以运行 `/read AGENTS.md` 来加载项目上下文。
+
+---
+
 ## 1. 项目概述
 
 ### 1.1 项目名称
@@ -1536,3 +1544,166 @@ GOOS=darwin GOARCH=amd64 go build -o bin/netdispatch ./cmd/netdispatch
 
 > **注意**：macOS 版本因 systray 库依赖 CGO，建议在 macOS 系统上原生编译。
 
+---
+
+## 19. 版本管理
+
+### 19.1 版本注入
+
+版本信息在编译时通过 ldflags 注入：
+
+```bash
+# 使用构建脚本
+./build.sh v1.0.0
+
+# 或手动指定
+go build -ldflags "-s -w \
+    -X netdispatch/pkg/version.Version=1.0.0 \
+    -X netdispatch/pkg/version.GitCommit=$(git rev-parse --short HEAD) \
+    -X netdispatch/pkg/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    -o netdispatch.exe ./cmd/netdispatch
+```
+
+### 19.2 版本包结构
+
+```
+pkg/version/
+└── version.go    # Version, GitCommit, BuildDate 变量
+```
+
+### 19.3 版本显示
+
+- **命令行**：`./netdispatch.exe version`
+- **Web GUI**：侧边栏标题下方
+- **API**：`GET /api/v1/system/info`
+
+---
+
+## 20. 安全特性
+
+### 20.1 出口策略循环检测
+
+防止用户配置上游代理指向本机代理端口，导致无限循环。
+
+**检测逻辑**（`internal/egress/validation.go`）：
+
+```go
+func isLoopAddress(host string, port int, serverCfg *ServerConfig) bool {
+    // 检查端口是否匹配本机代理端口
+    if port != serverCfg.HTTPPort && port != serverCfg.SOCKS5Port {
+        return false
+    }
+
+    // 检查主机是否指向本机
+    // 1. 直接 IP 匹配
+    // 2. localhost / 127.0.0.1 / ::1
+    // 3. 本机所有网卡 IP
+}
+```
+
+**效果**：创建出口策略时，如果上游代理地址为本机代理端口，会返回错误。
+
+### 20.2 单实例检测
+
+确保同一时间只有一个实例运行：
+
+```
+~/.local/run/netdispatch/netdispatch.lock
+```
+
+---
+
+## 21. 开发脚本
+
+### 21.1 构建脚本 (build.sh)
+
+```bash
+./build.sh v1.0.0
+```
+
+功能：
+1. 编译前端 (`npm run build`)
+2. 编译后端并注入版本号
+3. 输出可执行文件
+
+### 21.2 发布脚本 (release.sh)
+
+```bash
+./release.sh v1.1.0
+```
+
+功能：
+1. 执行构建
+2. 创建 git tag
+3. 推送到 GitHub
+4. 创建 GitHub Release 并上传可执行文件
+
+---
+
+## 22. 项目文件索引
+
+### 22.1 核心文件
+
+| 文件 | 描述 |
+|------|------|
+| `AGENTS.md` | AI 助手指南，包含项目上下文和开发指南 |
+| `README.md` | 项目介绍和快速开始 |
+| `docs/architecture.md` | 本文档，详细架构设计 |
+| `docs/build-guide.md` | 编译指南 |
+| `configs/config.yaml` | 示例配置文件 |
+
+### 22.2 后端关键模块
+
+| 路径 | 描述 |
+|------|------|
+| `cmd/netdispatch/main.go` | 程序入口，CLI 定义 |
+| `internal/handler/http.go` | HTTP/HTTPS 代理处理 |
+| `internal/handler/socks5.go` | SOCKS5 代理处理 |
+| `internal/egress/manager.go` | 出口策略管理 |
+| `internal/egress/validation.go` | 出口策略验证（含循环检测） |
+| `internal/router/manager.go` | 路由规则管理 |
+| `internal/router/rule.go` | 规则匹配逻辑 |
+| `internal/router/tree.go` | 域名树优化 |
+| `internal/connmgr/manager.go` | 连接管理、流量统计 |
+| `pkg/api/server.go` | REST API 路由定义 |
+| `pkg/api/handlers.go` | API 处理函数 |
+| `pkg/version/version.go` | 版本信息 |
+| `pkg/ws/hub.go` | WebSocket Hub |
+
+### 22.3 前端关键文件
+
+| 路径 | 描述 |
+|------|------|
+| `web/src/App.tsx` | 主应用组件 |
+| `web/src/components/Sidebar.tsx` | 侧边栏（含版本显示） |
+| `web/src/pages/Dashboard.tsx` | 仪表盘（WebSocket 实时更新） |
+| `web/src/pages/Egress.tsx` | 出口策略管理 |
+| `web/src/pages/Rules.tsx` | 路由规则管理（含优先级说明） |
+| `web/src/pages/Settings.tsx` | 系统设置 |
+| `web/src/pages/Help.tsx` | 使用手册 |
+| `web/src/services/api.ts` | API 客户端定义 |
+
+---
+
+## 23. 变更日志
+
+### v1.0.0 (2026-03-31)
+
+**新功能**：
+- 版本号注入系统（`pkg/version`）
+- 出口策略循环检测
+- WebSocket 实时流量更新（每 2 秒）
+- 路由规则优先级说明（Web GUI）
+- 响应式布局（移动端适配）
+- 现代化 UI 主题
+
+**改进**：
+- 默认端口改为 8009/8010
+- 域名树优化（`internal/router/tree.go`）
+- 端口映射优化（O(1) 查找）
+- 流量复制使用 sync.Pool 减少内存分配
+
+**文档**：
+- 添加 `AGENTS.md` AI 助手指南
+- 更新架构文档
+- 更新 README
