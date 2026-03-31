@@ -3,9 +3,11 @@ import {
   ApiOutlined,
   CloudDownloadOutlined,
   CloudUploadOutlined,
+  WifiOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect, useRef } from 'react'
 import { statsApi } from '../services/api'
 
 interface TrafficPoint {
@@ -14,17 +16,104 @@ interface TrafficPoint {
   bytes_out_rate: number
 }
 
+interface TrafficStats {
+  bytes_in: number
+  bytes_out: number
+  active_connections: number
+  total_connections: number
+}
+
+// Custom hook for WebSocket connection
+function useWebSocketStats() {
+  const [stats, setStats] = useState<TrafficStats | null>(null)
+  const [connected, setConnected] = useState(false)
+  const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimeoutRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const connect = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${protocol}//${window.location.host}/ws`
+
+      const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        setConnected(true)
+        console.log('WebSocket connected')
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'traffic') {
+            setStats({
+              bytes_in: data.data.bytes_in,
+              bytes_out: data.data.bytes_out,
+              active_connections: data.data.active_connections,
+              total_connections: stats?.total_connections || 0,
+            })
+          }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e)
+        }
+      }
+
+      ws.onclose = () => {
+        setConnected(false)
+        console.log('WebSocket disconnected, reconnecting...')
+        // Reconnect after 3 seconds
+        reconnectTimeoutRef.current = window.setTimeout(connect, 3000)
+      }
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error)
+      }
+    }
+
+    connect()
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+      }
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+    }
+  }, [])
+
+  return { stats, connected }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+  }
+  if (bytes >= 1024 * 1024) {
+    return (bytes / 1024 / 1024).toFixed(2) + ' MB'
+  }
+  if (bytes >= 1024) {
+    return (bytes / 1024).toFixed(2) + ' KB'
+  }
+  return bytes + ' B'
+}
+
 function Dashboard() {
-  const { data: stats } = useQuery({
+  // Use WebSocket for real-time stats
+  const { stats: wsStats, connected } = useWebSocketStats()
+
+  // Fall back to polling for total_connections and traffic history
+  const { data: apiStats } = useQuery({
     queryKey: ['stats'],
     queryFn: statsApi.getOverview,
-    refetchInterval: 5000,
+    refetchInterval: 10000, // Less frequent as backup
   })
 
   const { data: trafficHistory } = useQuery({
     queryKey: ['trafficHistory'],
     queryFn: statsApi.getHistory,
-    refetchInterval: 5000,
+    refetchInterval: 2000, // Keep polling for history chart
   })
 
   const { data: recentConnections } = useQuery({
@@ -32,6 +121,14 @@ function Dashboard() {
     queryFn: statsApi.getRecentConnections,
     refetchInterval: 5000,
   })
+
+  // Merge WebSocket stats with API stats
+  const stats = {
+    active_connections: wsStats?.active_connections ?? apiStats?.active_connections ?? 0,
+    bytes_in: wsStats?.bytes_in ?? apiStats?.bytes_in ?? 0,
+    bytes_out: wsStats?.bytes_out ?? apiStats?.bytes_out ?? 0,
+    total_connections: apiStats?.total_connections ?? 0,
+  }
 
   const trafficOption = {
     title: { text: '实时流量', left: 'center' },
@@ -87,41 +184,44 @@ function Dashboard() {
 
   return (
     <div>
-      <Row gutter={16}>
-        <Col span={6}>
-          <Card>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable>
             <Statistic
-              title="活跃连接"
-              value={stats?.active_connections || 0}
+              title={
+                <span>
+                  活跃连接
+                  {connected && <WifiOutlined style={{ marginLeft: 8, color: '#52c41a' }} />}
+                </span>
+              }
+              value={stats.active_connections}
               prefix={<ApiOutlined />}
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable>
             <Statistic
               title="入站流量"
-              value={stats?.bytes_in || 0}
+              value={formatBytes(stats.bytes_in)}
               prefix={<CloudDownloadOutlined />}
-              suffix="字节"
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable>
             <Statistic
               title="出站流量"
-              value={stats?.bytes_out || 0}
+              value={formatBytes(stats.bytes_out)}
               prefix={<CloudUploadOutlined />}
-              suffix="字节"
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable>
             <Statistic
               title="总连接数"
-              value={stats?.total_connections || 0}
+              value={stats.total_connections}
             />
           </Card>
         </Col>
@@ -138,6 +238,7 @@ function Dashboard() {
           rowKey="id"
           pagination={{ pageSize: 10 }}
           size="small"
+          scroll={{ x: 600 }}
         />
       </Card>
     </div>

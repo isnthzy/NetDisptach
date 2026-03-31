@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
-import { Card, Button, Table, Modal, Form, Input, Select, InputNumber, Switch, Space, message, Tag, Divider, Radio, Progress } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, UploadOutlined, ImportOutlined, LinkOutlined, FileOutlined } from '@ant-design/icons'
+import { Card, Button, Table, Modal, Form, Input, Select, InputNumber, Switch, Space, message, Tag, Divider, Radio, Progress, Tooltip } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, UploadOutlined, ImportOutlined, LinkOutlined, FileOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { rulesApi, egressApi } from '../services/api'
 
@@ -226,10 +226,17 @@ function Rules() {
 
   const columns = [
     {
-      title: '优先级',
+      title: (
+        <span>
+          优先级
+          <Tooltip title="数值越小优先级越高，规则越先匹配">
+            <InfoCircleOutlined style={{ marginLeft: 4, color: '#999', fontSize: 12 }} />
+          </Tooltip>
+        </span>
+      ),
       dataIndex: 'priority',
       key: 'priority',
-      width: 70,
+      width: 90,
     },
     {
       title: '规则名称',
@@ -344,6 +351,7 @@ function Rules() {
           <Form.Item
             name="priority"
             label="优先级"
+            extra="数值越小优先级越高，范围 0-100"
             rules={[
               { required: true, message: '请输入优先级' },
               {
@@ -495,6 +503,7 @@ function Rules() {
           <Form.Item
             name="priority"
             label="优先级"
+            extra="数值越小优先级越高，范围 0-100"
             rules={[
               { required: true, message: '请输入优先级' },
               {

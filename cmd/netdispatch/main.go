@@ -306,7 +306,7 @@ func runServer() {
 	// Start traffic history recorder with proper shutdown
 	connMgr := proxyServer.ConnectionManager()
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
@@ -314,6 +314,9 @@ func runServer() {
 				return
 			case <-ticker.C:
 				connMgr.RecordTraffic()
+					// Broadcast real-time stats via WebSocket
+					stats := connMgr.GetStats()
+					wsHub.BroadcastTraffic(stats.BytesIn, stats.BytesOut, stats.ActiveConnections)
 			}
 		}
 	}()

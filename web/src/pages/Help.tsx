@@ -70,7 +70,13 @@ function Help() {
                   <Paragraph>
                     <Text strong>路由规则</Text> 决定了哪些请求使用哪个出口策略。
                   </Paragraph>
-                  <Paragraph>规则按优先级从高到低匹配，匹配条件包括：</Paragraph>
+                  <Paragraph>规则按优先级从高到低匹配：</Paragraph>
+                  <ul>
+                    <li><Text strong>优先级</Text>：数值越小优先级越高，越先匹配</li>
+                    <li>范围：0-100，建议留有一定间隔以便后续插入新规则</li>
+                  </ul>
+                  <Divider />
+                  <Paragraph>匹配条件包括：</Paragraph>
                   <ul>
                     <li><Text strong>域名</Text>：支持通配符，如 *.google.com</li>
                     <li><Text strong>IP/CIDR</Text>：如 192.168.0.0/16、10.0.0.0/8</li>
@@ -80,9 +86,9 @@ function Help() {
                     <Text type="secondary">示例：</Text>
                   </Paragraph>
                   <ul>
-                    <li>规则：*.google.com → WiFi走代理（所有 Google 服务走 WiFi 代理）</li>
-                    <li>规则：10.0.0.0/8 → 网线直连（内网地址直连）</li>
-                    <li>规则：*.badsite.com → 拒绝（阻止特定网站）</li>
+                    <li>规则（优先级10）：*.google.com → WiFi走代理</li>
+                    <li>规则（优先级20）：10.0.0.0/8 → 网线直连</li>
+                    <li>规则（优先级100）：* → 默认出口（兜底规则）</li>
                   </ul>
                 </div>
               ),
@@ -125,7 +131,7 @@ function Help() {
                     <li>点击左侧菜单「路由规则」</li>
                     <li>点击「添加规则」按钮</li>
                     <li>输入规则名称</li>
-                    <li>设置优先级（数字越小优先级越高）</li>
+                    <li>设置优先级（<Text type="warning">数值越小优先级越高</Text>，范围 0-100）</li>
                     <li>选择名单类型
                       <ul>
                         <li>普通规则：标准路由规则</li>
@@ -161,9 +167,8 @@ function Help() {
                     <li>点击左侧菜单「设置」</li>
                     <li>在「代理端口」区域设置各协议端口
                       <ul>
-                        <li>HTTP 代理端口（默认 809）</li>
-                        <li>HTTPS 代理端口（默认 811）</li>
-                        <li>SOCKS5 端口（默认 810）</li>
+                        <li>HTTP/HTTPS 代理端口（默认 8009）</li>
+                        <li>SOCKS5 端口（默认 8010）</li>
                       </ul>
                     </li>
                     <li>可以单独启用/禁用各协议</li>
@@ -198,12 +203,11 @@ function Help() {
                 <div>
                   <Paragraph>浏览器或系统代理设置：</Paragraph>
                   <ul>
-                    <li>HTTP 代理：服务器地址 + 端口 809</li>
-                    <li>HTTPS 代理：服务器地址 + 端口 811</li>
-                    <li>SOCKS5 代理：服务器地址 + 端口 810</li>
+                    <li>HTTP/HTTPS 代理：服务器地址 + 端口 8009</li>
+                    <li>SOCKS5 代理：服务器地址 + 端口 8010</li>
                   </ul>
                   <Paragraph>
-                    <Text type="secondary">例如：服务器 IP 为 <YOUR_SERVER_IP>，HTTP 代理设为 <YOUR_SERVER_IP>:809</Text>
+                    <Text type="secondary">例如：服务器 IP 为 <YOUR_SERVER_IP>，HTTP 代理设为 <YOUR_SERVER_IP>:8009</Text>
                   </Paragraph>
                 </div>
               ),
@@ -215,11 +219,15 @@ function Help() {
                 <div>
                   <Paragraph>点击左侧菜单「仪表盘」可以查看：</Paragraph>
                   <ul>
-                    <li>当前活跃连接数</li>
-                    <li>入站/出站流量统计</li>
-                    <li>实时流量图表（每30秒刷新）</li>
+                    <li>当前活跃连接数（实时更新）</li>
+                    <li>入站/出站流量统计（实时更新）</li>
+                    <li>实时流量图表（每2秒刷新）</li>
                     <li>最近连接列表</li>
                   </ul>
+                  <Divider />
+                  <Paragraph>
+                    <Text type="secondary">页面顶部显示的 <Text code>实时连接</Text> 图标表示已连接 WebSocket，数据实时推送。</Text>
+                  </Paragraph>
                 </div>
               ),
             },
@@ -246,11 +254,11 @@ function Help() {
             },
             {
               key: '11',
-              label: '11. Web 监听控制台是什么？',
+              label: '11. Web 监控控制台是什么？',
               children: (
                 <div>
                   <Paragraph>
-                    <Text strong>Web 监听控制台</Text> 是 NetDispatch 提供的 Web 管理界面，通过浏览器访问。
+                    <Text strong>Web 监控控制台</Text> 是 NetDispatch 提供的 Web 管理界面，通过浏览器访问。
                   </Paragraph>
                   <Paragraph><Text strong>功能包括：</Text></Paragraph>
                   <ul>
@@ -269,11 +277,9 @@ function Help() {
                   <Divider />
                   <Paragraph><Text strong>监听设置：</Text></Paragraph>
                   <ul>
-                    <li><Text strong>启用/关闭</Text>：可通过开关控制是否启用 Web 控制台</li>
-                    <li><Text code>0.0.0.0</Text>（默认）：监听所有网卡，局域网内其他设备可访问</li>
-                    <li><Text code>127.0.0.1</Text>：仅本机可访问控制台（更安全）</li>
+                    <li><Text code>127.0.0.1</Text>（默认）：仅本机可访问控制台（更安全）</li>
+                    <li><Text code>0.0.0.0</Text>：监听所有网卡，局域网内其他设备可访问</li>
                   </ul>
-                  <Paragraph><Text strong>端口：</Text>自动选择可用端口，无需手动配置。</Paragraph>
                 </div>
               ),
             },
@@ -326,6 +332,13 @@ function Help() {
                     <li>确认网卡名称正确</li>
                     <li>检查网卡是否已启用</li>
                     <li>确认网卡有有效的IP地址</li>
+                  </ul>
+                  <Divider />
+                  <Paragraph><Text strong>Q: 域名匹配不生效？</Text></Paragraph>
+                  <ul>
+                    <li><Text code>*.example.com</Text> 匹配 <Text code>www.example.com</Text> 等子域名</li>
+                    <li><Text code>*.example.com</Text> <Text type="danger">不匹配</Text> <Text code>example.com</Text> 本身</li>
+                    <li>如需匹配主域名，请同时添加 <Text code>example.com</Text> 和 <Text code>*.example.com</Text></li>
                   </ul>
                 </div>
               ),

@@ -2,10 +2,10 @@ server:
     enabled: true
     bind: <YOUR_SERVER_IP>
     http:
-        port: 809
+        port: 8009
         enabled: true
     socks5:
-        port: 810
+        port: 8010
         enabled: true
         auth:
             enabled: false
