@@ -2,6 +2,8 @@
 
 > **AI 助手指南**：阅读此文件以快速理解项目并开始工作。此文件包含项目上下文、开发指南、常用命令和问题解决方案。
 
+---
+
 ## 项目概述
 
 **NetDispatch** 是一个高性能多协议代理网络调度器，支持智能出口路由。
@@ -22,102 +24,321 @@
 
 ---
 
-## 技术栈
+## 开发完成后的标准操作
 
-**后端 (Go)**:
-- 框架：`net/http` + `gorilla/mux`
-- 日志：`rs/zerolog`
-- CLI：`spf13/cobra`
-- 托盘：`fyne.io/systray`
-- WebSocket：`gorilla/websocket`
+> **重要**：每次开发完成后，必须按照以下顺序执行操作。
 
-**前端 (React)**:
-- React 18 + TypeScript
-- Vite 构建
-- Ant Design UI
-- ECharts 图表
-- TanStack Query 数据获取
-- WebSocket 实时更新
+### 1. 代码验证
+
+```bash
+# 后端编译检查
+go build ./...
+
+# 后端测试
+go test ./...
+
+# 前端构建检查
+cd web && npm run build && cd ..
+```
+
+### 2. 版本更新
+
+编辑 `docs/architecture.md`，在"变更日志"章节添加新版本记录：
+
+```markdown
+### v1.x.x (YYYY-MM-DD)
+
+**新功能**：
+- 功能描述
+
+**改进**：
+- 改进描述
+
+**修复**：
+- Bug 修复描述
+```
+
+### 3. 提交代码
+
+```bash
+# 查看更改
+git status
+
+# 添加所有更改
+git add -A
+
+# 提交（使用规范的提交信息格式）
+git commit -m "feat: 简短描述
+
+- 详细说明 1
+- 详细说明 2
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+提交类型规范：
+- `feat:` 新功能
+- `fix:` Bug 修复
+- `docs:` 文档更新
+- `refactor:` 重构
+- `perf:` 性能优化
+- `test:` 测试相关
+- `chore:` 构建/工具相关
+
+### 4. 推送到 GitHub
+
+```bash
+git push origin main
+```
+
+### 5. 创建 Release（如有需要）
+
+```bash
+# 使用发布脚本
+./release.sh v1.x.x
+
+# 或手动操作
+./build.sh v1.x.x
+git tag -a v1.x.x -m "Release v1.x.x"
+git push origin main --tags
+gh release create v1.x.x ./netdispatch.exe --title "NetDispatch v1.x.x" --notes "..."
+```
 
 ---
 
-## 项目结构
+## 开发时需要具备的能力
+
+### 能力 1：理解代理协议
+
+必须理解以下协议的工作原理：
+- **HTTP 代理**：处理普通 HTTP 请求和 CONNECT 隧道
+- **SOCKS5 代理**：理解握手流程、认证、CONNECT 命令
+- **上游代理**：如何连接上游 HTTP/SOCKS5 代理
+
+关键文件：
+- `internal/handler/http.go`
+- `internal/handler/socks5.go`
+
+### 能力 2：理解路由引擎
+
+必须理解：
+- 规则优先级（数值越小优先级越高）
+- 匹配条件（域名/IP CIDR/端口）
+- 通配符匹配规则（`*.example.com` 不匹配 `example.com`）
+- 黑白名单机制
+
+关键文件：
+- `internal/router/manager.go`
+- `internal/router/rule.go`
+- `internal/router/tree.go`
+
+### 能力 3：理解出口策略
+
+必须理解：
+- 出口策略 = 网卡 + 上游代理（可选）
+- 循环检测机制
+- 如何选择出口策略
+
+关键文件：
+- `internal/egress/manager.go`
+- `internal/egress/validation.go`
+
+### 能力 4：前端开发能力
+
+必须熟悉：
+- React + TypeScript
+- Ant Design 组件库
+- TanStack Query 数据获取
+- WebSocket 实时通信
+
+关键文件：
+- `web/src/pages/Dashboard.tsx`（WebSocket 实时更新示例）
+- `web/src/services/api.ts`（API 客户端）
+- `web/src/components/Sidebar.tsx`（版本显示示例）
+
+### 能力 5：配置管理
+
+必须理解：
+- YAML 配置结构
+- 配置验证逻辑
+- 配置热更新
+
+关键文件：
+- `pkg/config/config.go`
+- `configs/config.yaml`
+
+---
+
+## 技术栈详解
+
+**后端 (Go)**:
+| 组件 | 库 | 用途 |
+|------|-----|------|
+| HTTP 框架 | `net/http` + `gorilla/mux` | HTTP 服务器和路由 |
+| 日志 | `rs/zerolog` | 结构化日志 |
+| CLI | `spf13/cobra` | 命令行界面 |
+| 托盘 | `fyne.io/systray` | 系统托盘 |
+| WebSocket | `gorilla/websocket` | WebSocket 支持 |
+| 配置 | `gopkg.in/yaml.v3` | YAML 解析 |
+
+**前端 (React)**:
+| 组件 | 库 | 用途 |
+|------|-----|------|
+| 框架 | React 18 | UI 框架 |
+| 构建 | Vite | 构建工具 |
+| UI | Ant Design | UI 组件库 |
+| 图表 | ECharts | 流量图表 |
+| 数据 | TanStack Query | 数据获取和缓存 |
+| 实时 | Native WebSocket | 实时更新 |
+| 样式 | Tailwind CSS | CSS 框架 |
+
+---
+
+## 项目结构详解
 
 ```
 netdispatch/
-├── cmd/netdispatch/          # 程序入口
-│   └── main.go              # Cobra CLI 定义
-├── internal/                 # 内部模块（不对外暴露）
-│   ├── connmgr/             # 连接管理、流量统计
-│   ├── egress/              # 出口策略管理、验证
-│   ├── handler/             # 协议处理器 (HTTP/SOCKS5)
-│   ├── nic/                 # 网卡检测与管理
-│   ├── proxy/               # 代理服务器核心
-│   ├── router/              # 路由引擎、规则匹配
-│   └── tray/                # 系统托盘
-├── pkg/                      # 公共模块（可对外暴露）
-│   ├── api/                 # REST API + WebSocket 处理
-│   ├── config/              # YAML 配置管理
-│   ├── version/             # 版本信息（编译时注入）
-│   ├── singleinstance/      # 单实例检测
-│   └── ws/                  # WebSocket Hub
-├── web/                      # 前端项目
+├── cmd/netdispatch/              # 程序入口
+│   ├── main.go                   # Cobra CLI 定义、启动逻辑
+│   ├── console_windows.go        # Windows 控制台隐藏
+│   ├── console_other.go          # 其他平台空实现
+│   ├── messagebox_windows.go     # Windows 弹窗
+│   └── messagebox_other.go       # 其他平台 stderr 输出
+│
+├── internal/                     # 内部模块（不对外暴露）
+│   ├── connmgr/                  # 连接管理
+│   │   └── manager.go            # 连接记录、流量统计、历史记录
+│   │
+│   ├── egress/                   # 出口策略
+│   │   ├── manager.go            # 策略管理、选择逻辑
+│   │   └── validation.go         # 验证逻辑、循环检测
+│   │
+│   ├── handler/                  # 协议处理器
+│   │   ├── http.go               # HTTP/HTTPS 代理处理
+│   │   └── socks5.go             # SOCKS5 代理处理
+│   │
+│   ├── nic/                      # 网卡管理
+│   │   └── manager.go            # 网卡检测、IP 获取
+│   │
+│   ├── proxy/                    # 代理服务器核心
+│   │   └── server.go             # HTTP/SOCKS5 服务启动
+│   │
+│   ├── router/                   # 路由引擎
+│   │   ├── manager.go            # 规则管理、路由决策
+│   │   ├── rule.go               # 规则定义、匹配逻辑
+│   │   └── tree.go               # 域名树优化
+│   │
+│   └── tray/                     # 系统托盘
+│       └── tray.go               # 托盘图标、菜单
+│
+├── pkg/                          # 公共模块（可对外暴露）
+│   ├── api/                      # REST API
+│   │   ├── server.go             # API 路由定义
+│   │   └── handlers.go           # API 处理函数
+│   │
+│   ├── config/                   # 配置管理
+│   │   └── config.go             # YAML 配置结构和方法
+│   │
+│   ├── version/                  # 版本信息
+│   │   └── version.go            # 编译时注入的版本变量
+│   │
+│   ├── singleinstance/           # 单实例检测
+│   │   ├── singleinstance.go     # 跨平台接口
+│   │   ├── lock_windows.go       # Windows 文件锁
+│   │   ├── lock_unix.go          # Unix 文件锁
+│   │   ├── process_windows.go    # Windows 进程检测
+│   │   └── process_unix.go       # Unix 进程检测
+│   │
+│   ├── ws/                       # WebSocket
+│   │   └── hub.go                # WebSocket Hub、广播
+│   │
+│   └── crashlog/                 # 崩溃日志
+│       └── crashlog.go           # 崩溃时保存日志
+│
+├── web/                          # 前端项目
 │   ├── src/
-│   │   ├── components/      # Sidebar 等组件
-│   │   ├── pages/           # Dashboard, Egress, Rules 等
-│   │   └── services/api.ts  # API 客户端
-│   └── dist/                # 构建产物（嵌入二进制）
-├── configs/config.yaml       # 示例配置
-├── build.sh                  # 构建脚本
-├── release.sh                # 发布脚本
-└── docs/architecture.md      # 详细架构文档
+│   │   ├── App.tsx               # 主应用、路由
+│   │   ├── main.tsx              # 入口
+│   │   ├── index.css             # 全局样式、主题
+│   │   ├── components/
+│   │   │   └── Sidebar.tsx       # 侧边栏、版本显示
+│   │   ├── pages/
+│   │   │   ├── Dashboard.tsx     # 仪表盘、WebSocket
+│   │   │   ├── Egress.tsx        # 出口策略管理
+│   │   │   ├── Rules.tsx         # 路由规则管理
+│   │   │   ├── Logs.tsx          # 日志查看
+│   │   │   ├── Settings.tsx      # 系统设置
+│   │   │   └── Help.tsx          # 使用手册
+│   │   └── services/
+│   │       └── api.ts            # API 客户端定义
+│   │
+│   └── dist/                     # 构建产物（嵌入二进制）
+│
+├── configs/config.yaml           # 示例配置
+├── build.sh                      # 构建脚本
+├── release.sh                    # 发布脚本
+├── AGENTS.md                     # 本文件（AI 助手指南）
+├── README.md                     # 项目介绍
+└── docs/
+    ├── architecture.md           # 详细架构文档
+    ├── build-guide.md            # 编译指南
+    └── test-plan.md              # 测试计划
 ```
 
 ---
 
-## 开发命令
+## 开发命令速查
 
-### 构建项目
+### 后端开发
 
 ```bash
-# 使用构建脚本（推荐，自动注入版本号）
-./build.sh v1.0.0
+# 编译检查
+go build ./...
 
-# 或手动构建
-cd web && npm run build && cd ..
-go build -ldflags "-s -w \
-    -X netdispatch/pkg/version.Version=1.0.0 \
-    -X netdispatch/pkg/version.GitCommit=$(git rev-parse --short HEAD) \
-    -X netdispatch/pkg/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    -o netdispatch.exe ./cmd/netdispatch
+# 运行测试
+go test ./...
+
+# 运行服务
+go run ./cmd/netdispatch start
+
+# 指定配置文件
+go run ./cmd/netdispatch start -c configs/config.yaml
+
+# 查看版本
+go run ./cmd/netdispatch version
 ```
 
 ### 前端开发
 
 ```bash
 cd web
-npm install          # 安装依赖
-npm run dev          # 开发服务器
-npm run build        # 生产构建
+
+# 安装依赖
+npm install
+
+# 开发服务器
+npm run dev
+
+# 生产构建
+npm run build
+
+# 类型检查
+npx tsc --noEmit
 ```
 
-### 后端开发
+### 构建与发布
 
 ```bash
-go build ./...       # 编译检查
-go test ./...        # 运行测试
-go run ./cmd/netdispatch start   # 运行服务
-```
+# 构建指定版本
+./build.sh v1.0.0
 
-### 发布流程
-
-```bash
-./release.sh v1.1.0  # 自动构建、打标签、创建 GitHub Release
+# 发布新版本
+./release.sh v1.0.0
 ```
 
 ---
 
-## 核心概念
+## 核心概念详解
 
 ### 出口策略 (Egress Policy)
 
@@ -131,9 +352,16 @@ go run ./cmd/netdispatch start   # 运行服务
 - "WiFi走代理"：wlan0 网卡，SOCKS5 代理 192.168.1.100:1080
 ```
 
-**重要验证**：
-- 不能配置上游代理指向本机代理端口（会导致循环）
-- 验证逻辑在 `internal/egress/validation.go`
+**选择流程**：
+1. 路由规则匹配 → 获取 egress_id
+2. 根据 egress_id 查找出口策略
+3. 如果策略有上游代理 → 通过代理连接目标
+4. 如果无代理 → 直接通过指定网卡连接目标
+
+**循环检测**：
+- 创建策略时验证上游代理地址
+- 检测本机 IP、localhost、127.0.0.1
+- 检测端口是否为 8009/8010
 
 ### 路由规则
 
@@ -141,73 +369,123 @@ go run ./cmd/netdispatch start   # 运行服务
 
 ```
 规则匹配顺序：
-1. 按优先级排序
-2. 从低到高匹配
+1. 规则按优先级排序（升序）
+2. 从优先级最低开始匹配
 3. 第一个匹配的规则生效
 
-匹配条件：
+匹配条件（AND 关系）：
 - 域名：支持 *.example.com 通配符
 - IP/CIDR：如 10.0.0.0/8
 - 端口：如 80, 443
 ```
 
-**注意事项**：
-- `*.example.com` 匹配 `www.example.com` 但**不匹配** `example.com`
-- 如需匹配主域名，需同时添加 `example.com` 和 `*.example.com`
+**通配符规则**：
+- `*` 匹配所有
+- `*.example.com` 匹配 `www.example.com`、`api.example.com`
+- `*.example.com` **不匹配** `example.com`（需单独添加）
+
+**黑白名单**：
+- `list_type: whitelist` - 仅允许匹配的地址
+- `list_type: blacklist` - 阻止匹配的地址
+- `list_type: none` - 普通规则
 
 ### WebSocket 实时更新
 
-后端每 2 秒广播流量统计到 WebSocket 客户端：
+后端每 2 秒广播流量统计：
 
 ```go
 // cmd/netdispatch/main.go
-wsHub.BroadcastTraffic(stats.BytesIn, stats.BytesOut, stats.ActiveConnections)
+go func() {
+    ticker := time.NewTicker(2 * time.Second)
+    for {
+        select {
+        case <-ticker.C:
+            connMgr.RecordTraffic()
+            stats := connMgr.GetStats()
+            wsHub.BroadcastTraffic(stats.BytesIn, stats.BytesOut, stats.ActiveConnections)
+        }
+    }
+}()
 ```
 
-前端通过 `useWebSocketStats` hook 接收实时数据。
+前端使用自定义 hook：
+
+```typescript
+// web/src/pages/Dashboard.tsx
+function useWebSocketStats() {
+  const [stats, setStats] = useState<TrafficStats | null>(null)
+
+  useEffect(() => {
+    const ws = new WebSocket(`ws://${window.location.host}/ws`)
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      if (data.type === 'traffic') {
+        setStats(data.data)
+      }
+    }
+    return () => ws.close()
+  }, [])
+
+  return { stats, connected }
+}
+```
 
 ---
 
-## API 端点
+## API 端点完整列表
 
-### REST API
-
+### 网卡管理
 ```
-GET    /api/v1/nics                # 网卡列表
-GET    /api/v1/egress              # 出口策略列表
-POST   /api/v1/egress              # 创建出口策略
-PUT    /api/v1/egress/{id}         # 更新出口策略
-DELETE /api/v1/egress/{id}         # 删除出口策略
-GET    /api/v1/rules               # 路由规则列表
-POST   /api/v1/rules               # 创建规则
-PUT    /api/v1/rules/{id}          # 更新规则
-DELETE /api/v1/rules/{id}          # 删除规则
-POST   /api/v1/rules/import        # 从 URL 导入域名列表
-POST   /api/v1/rules/import/file   # 从文件导入域名列表
-GET    /api/v1/connections         # 活跃连接
-GET    /api/v1/connections/recent  # 最近连接
-GET    /api/v1/stats/overview      # 统计概览
-GET    /api/v1/stats/history       # 流量历史
-GET    /api/v1/config              # 配置
-PUT    /api/v1/config              # 更新配置
-GET    /api/v1/system/info         # 系统信息（含版本）
-GET    /api/v1/status              # 服务状态
-GET    /ws                         # WebSocket 端点
+GET  /api/v1/nics           # 获取网卡列表
+GET  /api/v1/nics/{name}    # 获取单个网卡信息
 ```
 
-### WebSocket 事件
+### 出口策略
+```
+GET    /api/v1/egress           # 列表
+POST   /api/v1/egress           # 创建
+PUT    /api/v1/egress/{id}      # 更新
+DELETE /api/v1/egress/{id}      # 删除
+POST   /api/v1/egress/{id}/test # 测试连接
+```
 
-```json
-// 服务端 -> 客户端：流量更新（每2秒）
-{
-  "type": "traffic",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "data": {
-    "bytes_in": 1024000,
-    "bytes_out": 2048000,
-    "active_connections": 42
-  }
-}
+### 路由规则
+```
+GET    /api/v1/rules              # 列表
+POST   /api/v1/rules              # 创建
+PUT    /api/v1/rules/{id}         # 更新
+DELETE /api/v1/rules/{id}         # 删除
+POST   /api/v1/rules/import       # 从 URL 导入域名
+POST   /api/v1/rules/import/file  # 从文件导入域名
+```
+
+### 连接管理
+```
+GET    /api/v1/connections          # 活跃连接列表
+GET    /api/v1/connections/recent   # 最近关闭的连接
+GET    /api/v1/connections/{id}     # 获取单个连接
+DELETE /api/v1/connections/{id}     # 关闭连接
+```
+
+### 统计信息
+```
+GET  /api/v1/stats/overview  # 总览统计
+GET  /api/v1/stats/traffic   # 流量统计
+GET  /api/v1/stats/history   # 流量历史（60个数据点）
+```
+
+### 系统管理
+```
+GET  /api/v1/config       # 获取配置
+PUT  /api/v1/config       # 更新配置
+GET  /api/v1/system/info  # 系统信息（版本等）
+GET  /api/v1/status       # 服务状态
+GET  /api/v1/health       # 健康检查
+```
+
+### WebSocket
+```
+GET  /ws  # WebSocket 连接
 ```
 
 ---
@@ -227,6 +505,8 @@ tasklist | grep netdispatch
 
 # 手动清理 lock 文件
 rm -f ~/.local/run/netdispatch/netdispatch.lock
+# 或 Windows
+del "%USERPROFILE%\.local\run\netdispatch\netdispatch.lock"
 ```
 
 ### 2. 代理循环问题
@@ -254,7 +534,7 @@ domains:
 
 **排查**：
 1. 检查 WebSocket 路径：`/ws`
-2. 检查控制台是否有连接错误
+2. 检查浏览器控制台是否有连接错误
 3. 前端会自动重连
 
 ### 5. 网卡绑定失败
@@ -264,7 +544,16 @@ domains:
 **解决**：
 - 检查网卡名称是否正确
 - Windows 网卡名：`以太网`, `WLAN`
-- 使用 `ipconfig` 查看实际名称
+- 使用 `ipconfig`（Windows）或 `ifconfig`（Linux）查看实际名称
+
+### 6. 前端构建后页面空白
+
+**原因**：路径问题或嵌入失败
+
+**解决**：
+1. 确保运行 `npm run build`
+2. 检查 `web/dist` 目录是否有文件
+3. 重新编译后端
 
 ---
 
@@ -279,16 +568,22 @@ curl -x socks5h://<YOUR_SERVER_IP>:8010 https://www.google.com -I
 
 # 测试 GitHub
 curl -x http://<YOUR_SERVER_IP>:8009 https://github.com -I
+
+# 测试国内网站（默认路由）
+curl -x http://<YOUR_SERVER_IP>:8009 https://www.baidu.com -I
+
+# 测试大文件传输
+curl -x http://<YOUR_SERVER_IP>:8009 -o /dev/null http://ipv4.download.thinkbroadband.com/5MB.zip
 ```
 
 ---
 
-## 配置文件示例
+## 配置文件完整示例
 
 ```yaml
 server:
   enabled: true
-  bind: "0.0.0.0"
+  bind: "0.0.0.0"        # 监听所有网卡
   http:
     port: 8009
     enabled: true
@@ -297,16 +592,20 @@ server:
     enabled: true
     auth:
       enabled: false
+      users: []
 
 nics:
   default: ""
-  display_names: {}
+  display_names:
+    "以太网": "网线"
+    "WLAN": "WiFi"
 
 egress_policies:
   - id: ethernet-direct
     name: 网线直连
     nic: 以太网
     proxy: null
+    description: 直接通过网线出口
   - id: wifi-proxy
     name: WiFi代理
     nic: WLAN
@@ -314,6 +613,9 @@ egress_policies:
       host: 10.93.187.36
       port: 7890
       protocol: http
+      username: ""
+      password: ""
+    description: 通过WiFi走上游代理
 
 routing:
   default_egress: ethernet-direct
@@ -326,45 +628,34 @@ routing:
       domains:
         - '*.google.com'
         - google.com
+        - '*.youtube.com'
+        - youtube.com
         - '*.github.com'
         - github.com
+      cidrs: []
+      ports: []
       action: forward
       egress_id: wifi-proxy
     - id: default-catch-all
       name: 默认路由
       priority: 100
       enabled: true
-      domains: ['*']
+      list_type: none
+      domains:
+        - '*'
+      cidrs: []
+      ports: []
       action: forward
       egress_id: ethernet-direct
 
 api:
   bind: 127.0.0.1
   port: 9090
+  auth:
+    enabled: false
+    username: ""
+    password: ""
 ```
-
----
-
-## 架构文档
-
-详细架构设计请参阅：`docs/architecture.md`
-
----
-
-## GitHub Release
-
-发布新版本：
-
-```bash
-./release.sh v1.1.0
-```
-
-这会：
-1. 构建前端和后端
-2. 注入版本号
-3. 创建 git tag
-4. 推送到 GitHub
-5. 创建 GitHub Release 并上传可执行文件
 
 ---
 
@@ -379,3 +670,15 @@ api:
 4. **单实例**：程序启动时会检测是否已有实例运行
 
 5. **循环检测**：创建出口策略时会验证上游代理不指向本机
+
+6. **代理协议**：SOCKS5 使用 `socks5h://` 让代理解析 DNS，避免本地 DNS 污染
+
+7. **域名通配符**：`*.example.com` 不匹配 `example.com`，需分别添加
+
+---
+
+## 相关文档
+
+- **详细架构设计**：`docs/architecture.md`
+- **编译指南**：`docs/build-guide.md`
+- **测试计划**：`docs/test-plan.md`
