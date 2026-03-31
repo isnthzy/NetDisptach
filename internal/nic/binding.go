@@ -36,6 +36,22 @@ func (d *Dialer) Dial(network, address, nicName string) (net.Conn, error) {
 		}
 	}
 
+	// Parse the target address to check IP family
+	host, _, err := net.SplitHostPort(address)
+	if err == nil {
+		targetIP := net.ParseIP(host)
+		// If target is IP (not domain), check if address families match
+		if targetIP != nil {
+			localIsIPv4 := localIP.To4() != nil
+			targetIsIPv4 := targetIP.To4() != nil
+			if localIsIPv4 != targetIsIPv4 {
+				// Address family mismatch - dial without binding to allow IPv6
+				dialer := &net.Dialer{Timeout: d.timeout}
+				return dialer.Dial(network, address)
+			}
+		}
+	}
+
 	dialer := &net.Dialer{
 		Timeout:   d.timeout,
 		LocalAddr: &net.TCPAddr{IP: localIP},

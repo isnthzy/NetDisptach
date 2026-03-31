@@ -221,7 +221,8 @@ func (h *SOCKS5Handler) handleRequest(conn net.Conn) (string, error) {
 	}
 	port = binary.BigEndian.Uint16(portBuf)
 
-	return fmt.Sprintf("%s:%d", host, port), nil
+	// Use net.JoinHostPort to handle IPv6 addresses correctly
+	return net.JoinHostPort(host, fmt.Sprintf("%d", port)), nil
 }
 
 func (h *SOCKS5Handler) sendReply(conn net.Conn, status byte, localAddr net.Addr) {
