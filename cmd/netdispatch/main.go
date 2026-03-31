@@ -168,9 +168,6 @@ func runServer() {
 		}
 	}()
 
-	// Hide console window for GUI mode (double-click launch)
-	hideConsole()
-
 	// Check for single instance using default API port
 	// The port check helps detect existing instances quickly
 	release, err := singleinstance.Acquire("netdispatch", getParsedAPIPort())
