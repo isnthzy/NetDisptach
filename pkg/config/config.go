@@ -89,15 +89,17 @@ type RoutingConfig struct {
 
 // Rule represents a routing rule
 type Rule struct {
-	ID       string   `yaml:"id" json:"id"`
-	Priority int      `yaml:"priority" json:"priority"`
-	Enabled  bool     `yaml:"enabled" json:"enabled"`
-	ListType string   `yaml:"list_type" json:"list_type"` // "none", "whitelist", "blacklist"
-	Domains  []string `yaml:"domains" json:"domains"`
-	CIDRs    []string `yaml:"cidrs" json:"cidrs"`
-	Ports    []int    `yaml:"ports" json:"ports"`
-	Action   string   `yaml:"action" json:"action"` // "forward" or "reject"
-	EgressID string   `yaml:"egress_id" json:"egress_id"`
+	ID          string   `yaml:"id" json:"id"`
+	Priority    int      `yaml:"priority" json:"priority"`
+	Enabled     bool     `yaml:"enabled" json:"enabled"`
+	ListType    string   `yaml:"list_type" json:"list_type"` // "none", "whitelist", "blacklist"
+	Domains     []string `yaml:"domains" json:"domains"`
+	CIDRs       []string `yaml:"cidrs" json:"cidrs"`
+	Ports       []int    `yaml:"ports" json:"ports"`
+	Action      string   `yaml:"action" json:"action"` // "forward" or "reject"
+	EgressID    string   `yaml:"egress_id" json:"egress_id"`
+	Source      string   `yaml:"source,omitempty" json:"source,omitempty"`           // Import source (URL or file path)
+	DomainCount int      `yaml:"domain_count,omitempty" json:"domain_count,omitempty"` // Number of domains for imported rules
 }
 
 // APIConfig represents API server configuration

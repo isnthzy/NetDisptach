@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Card, Button, Table, Modal, Form, Input, Select, InputNumber, Switch, Space, message, Tag, Divider } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { useState, useRef } from 'react'
+import { Card, Button, Table, Modal, Form, Input, Select, InputNumber, Switch, Space, message, Tag, Divider, Radio, Progress } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, UploadOutlined, ImportOutlined, LinkOutlined, FileOutlined } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { rulesApi, egressApi } from '../services/api'
 
@@ -16,6 +16,8 @@ interface Rule {
   action: string
   egress_id: string
   description: string
+  source?: string
+  domain_count?: number
 }
 
 const listTypeOptions = [
@@ -26,8 +28,14 @@ const listTypeOptions = [
 
 function Rules() {
   const [modalOpen, setModalOpen] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<Rule | null>(null)
+  const [importSource, setImportSource] = useState<'url' | 'file'>('url')
+  const [importProgress, setImportProgress] = useState<number | null>(null)
   const [form] = Form.useForm()
+  const [importForm] = Form.useForm()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const queryClient = useQueryClient()
 
   const { data: rules } = useQuery({
@@ -69,6 +77,43 @@ function Rules() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rules'] })
       message.success('规则已删除')
+    },
+  })
+
+  const importUrlMutation = useMutation({
+    mutationFn: rulesApi.importFromUrl,
+    onMutate: () => {
+      setImportProgress(0)
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['rules'] })
+      message.success(`导入成功，共 ${data.domain_count} 个域名`)
+      setImportModalOpen(false)
+      setImportProgress(null)
+      importForm.resetFields()
+    },
+    onError: (error: any) => {
+      message.error('导入失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+      setImportProgress(null)
+    },
+  })
+
+  const importFileMutation = useMutation({
+    mutationFn: (formData: FormData) => rulesApi.importFromFile(formData),
+    onMutate: () => {
+      setImportProgress(0)
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['rules'] })
+      message.success(`导入成功，共 ${data.domain_count} 个域名`)
+      setImportModalOpen(false)
+      setImportProgress(null)
+      importForm.resetFields()
+      setSelectedFile(null)
+    },
+    onError: (error: any) => {
+      message.error('导入失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+      setImportProgress(null)
     },
   })
 
@@ -134,6 +179,40 @@ function Rules() {
     })
   }
 
+  const handleImport = () => {
+    setImportSource('url')
+    importForm.resetFields()
+    importForm.setFieldsValue({ priority: 100, enabled: true, source_type: 'url' })
+    setSelectedFile(null)
+    setImportModalOpen(true)
+  }
+
+  const handleImportSubmit = () => {
+    importForm.validateFields().then(values => {
+      if (importSource === 'url') {
+        importUrlMutation.mutate({
+          name: values.name || '导入的域名列表',
+          url: values.url,
+          egress_id: values.egress_id,
+          priority: values.priority || 100,
+          enabled: values.enabled !== false,
+        })
+      } else {
+        if (!selectedFile) {
+          message.error('请选择文件')
+          return
+        }
+        const formData = new FormData()
+        formData.append('file', selectedFile)
+        formData.append('name', values.name || '导入的域名列表')
+        formData.append('egress_id', values.egress_id || '')
+        formData.append('priority', String(values.priority || 100))
+        formData.append('enabled', values.enabled !== false ? 'true' : 'false')
+        importFileMutation.mutate(formData)
+      }
+    })
+  }
+
   const getListTypeTag = (listType: string) => {
     switch (listType) {
       case 'whitelist':
@@ -178,7 +257,12 @@ function Rules() {
       title: '域名',
       dataIndex: 'domains',
       key: 'domains',
-      render: (domains: string[]) => domains?.slice(0, 2).join(', ') + (domains?.length > 2 ? '...' : '') || '-',
+      render: (domains: string[], record: Rule) => {
+        if (record.domain_count && record.domain_count > 0) {
+          return <Tag color="blue">{record.domain_count.toLocaleString()} 个域名</Tag>
+        }
+        return domains?.slice(0, 2).join(', ') + (domains?.length > 2 ? '...' : '') || '-'
+      },
     },
     {
       title: 'IP/CIDR',
@@ -229,7 +313,12 @@ function Rules() {
     <div>
       <Card
         title="路由规则管理"
-        extra={<Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加规则</Button>}
+        extra={
+          <Space>
+            <Button icon={<ImportOutlined />} onClick={handleImport}>导入列表</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加规则</Button>
+          </Space>
+        }
       >
         <Table
           columns={columns}
@@ -315,6 +404,82 @@ function Rules() {
             <Input.TextArea rows={2} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="导入域名列表"
+        open={importModalOpen}
+        onOk={handleImportSubmit}
+        onCancel={() => {
+          setImportModalOpen(false)
+          setImportProgress(null)
+        }}
+        confirmLoading={importUrlMutation.isPending || importFileMutation.isPending}
+        width={550}
+      >
+        <Form form={importForm} layout="vertical">
+          <Form.Item name="name" label="规则名称">
+            <Input placeholder="例如：代理域名列表" />
+          </Form.Item>
+
+          <Form.Item label="导入来源">
+            <Radio.Group value={importSource} onChange={(e) => setImportSource(e.target.value)}>
+              <Radio.Button value="url"><LinkOutlined /> 远程URL</Radio.Button>
+              <Radio.Button value="file"><FileOutlined /> 本地文件</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+
+          {importSource === 'url' ? (
+            <Form.Item name="url" label="URL" rules={[{ required: true, message: '请输入URL' }]}>
+              <Input placeholder="https://example.com/domain-list.txt" />
+            </Form.Item>
+          ) : (
+            <Form.Item label="文件">
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  if (e.target.files?.[0]) {
+                    setSelectedFile(e.target.files[0])
+                  }
+                }}
+                accept=".txt"
+              />
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                选择文件
+              </Button>
+              {selectedFile && (
+                <span style={{ marginLeft: 8 }}>{selectedFile.name}</span>
+              )}
+            </Form.Item>
+          )}
+
+          <Form.Item name="egress_id" label="出口策略">
+            <Select placeholder="选择出口策略" allowClear>
+              {(egressPolicies || []).map((policy: any) => (
+                <Select.Option key={policy.id} value={policy.id}>
+                  {policy.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="priority" label="优先级">
+            <InputNumber min={1} max={10000} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item name="enabled" label="启用" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Form>
+
+        {importProgress !== null && (
+          <Progress percent={importProgress} status="active" />
+        )}
       </Modal>
     </div>
   )
