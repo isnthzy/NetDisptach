@@ -56,9 +56,12 @@ func (s *Server) createEgress(w http.ResponseWriter, r *http.Request) {
 		validNICs[i] = nic.Name
 	}
 
+	// 获取服务器配置用于循环检测
+	serverCfg := s.getEgressServerConfig()
+
 	// 验证策略
 	existingPolicies := s.egressMgr.List()
-	if err := egress.ValidatePolicy(&policy, existingPolicies, "", validNICs); err != nil {
+	if err := egress.ValidatePolicy(&policy, existingPolicies, "", validNICs, serverCfg); err != nil {
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -91,9 +94,12 @@ func (s *Server) updateEgress(w http.ResponseWriter, r *http.Request) {
 		validNICs[i] = nic.Name
 	}
 
+	// 获取服务器配置用于循环检测
+	serverCfg := s.getEgressServerConfig()
+
 	// 验证策略（排除自身 ID）
 	existingPolicies := s.egressMgr.List()
-	if err := egress.ValidatePolicy(&policy, existingPolicies, id, validNICs); err != nil {
+	if err := egress.ValidatePolicy(&policy, existingPolicies, id, validNICs, serverCfg); err != nil {
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -136,6 +142,18 @@ func (s *Server) testEgress(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, result)
+}
+
+// getEgressServerConfig returns server config for loop detection
+func (s *Server) getEgressServerConfig() *egress.ServerConfig {
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+
+	return &egress.ServerConfig{
+		BindIP:     s.config.Server.Bind,
+		HTTPPort:   s.config.Server.HTTP.Port,
+		SOCKS5Port: s.config.Server.SOCKS5.Port,
+	}
 }
 
 // listRules returns all routing rules
