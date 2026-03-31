@@ -1,6 +1,6 @@
 server:
     enabled: true
-    bind: <YOUR_SERVER_IP>
+    bind: "0.0.0.0"
     http:
         port: 8009
         enabled: true

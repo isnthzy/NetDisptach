@@ -207,7 +207,7 @@ function Help() {
                     <li>SOCKS5 代理：服务器地址 + 端口 8010</li>
                   </ul>
                   <Paragraph>
-                    <Text type="secondary">例如：服务器 IP 为 <YOUR_SERVER_IP>，HTTP 代理设为 <YOUR_SERVER_IP>:8009</Text>
+                    <Text type="secondary">例如：服务器 IP 为 192.168.1.100，HTTP 代理设为 192.168.1.100:8009</Text>
                   </Paragraph>
                 </div>
               ),
