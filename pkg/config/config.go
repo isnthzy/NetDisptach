@@ -124,11 +124,11 @@ func DefaultConfig() *Config {
 			Enabled: true,
 			Bind:    "", // Will be auto-selected (Ethernet first, then WLAN)
 			HTTP: PortConfig{
-				Port:    809,
+				Port:    8009,
 				Enabled: true,
 			},
 			SOCKS5: SOCKSConfig{
-				Port:    810,
+				Port:    8010,
 				Enabled: true,
 				Auth: SOCKSAuthConfig{
 					Enabled: false,

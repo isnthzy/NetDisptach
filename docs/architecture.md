@@ -616,22 +616,14 @@ GET    /api/v1/health                   # 健康检查
   "channels": ["traffic", "connections", "logs"]
 }
 
-// Server -> Client: 流量更新
+// Server -> Client: 流量更新 (每2秒推送)
 {
   "type": "traffic",
   "timestamp": "2024-01-15T10:30:00Z",
   "data": {
     "bytes_in": 1024000,
     "bytes_out": 2048000,
-    "active_connections": 42,
-    "by_nic": {
-      "eth0": { "in": 500000, "out": 1000000 },
-      "wlan0": { "in": 524000, "out": 1048000 }
-    },
-    "by_egress": {
-      "eth0-direct": 20,
-      "wlan0-proxy": 22
-    }
+    "active_connections": 42
   }
 }
 
@@ -892,9 +884,8 @@ GET    /api/v1/health                   # 健康检查
 │  │                                                      │   │
 │  │ 代理端口设置                                         │   │
 │  │ ┌────────────────────────────────────────────────┐  │   │
-│  │ │ HTTP 代理端口:   [8080     ]   [√] 启用        │  │   │
-│  │ │ HTTPS 代理端口:  [8443     ]   [√] 启用        │  │   │
-│  │ │ SOCKS5 端口:     [1080     ]   [√] 启用        │  │   │
+│  │ │ HTTP/HTTPS 端口: [8009     ]   [√] 启用        │  │   │
+│  │ │ SOCKS5 端口:     [8010     ]   [√] 启用        │  │   │
 │  │ └────────────────────────────────────────────────┘  │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                             │
@@ -950,6 +941,52 @@ GET    /api/v1/health                   # 健康检查
 | Data Fetching | TanStack Query |
 | Real-time | native WebSocket |
 | Styling | Tailwind CSS |
+
+### 7.7 响应式设计
+
+界面支持多种屏幕尺寸自适应：
+
+**桌面端 (>= 768px)**：
+- 固定 220px 侧边栏
+- 多列卡片布局
+- 完整表格显示
+
+**移动端 (< 768px)**：
+- 可折叠抽屉式菜单（点击汉堡图标展开）
+- 单列卡片堆叠
+- 表格水平滚动
+- 顶部固定导航栏
+
+```typescript
+// 响应式断点检测
+const [isMobile, setIsMobile] = useState(false)
+
+useEffect(() => {
+  const checkMobile = () => setIsMobile(window.innerWidth < 768)
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  return () => window.removeEventListener('resize', checkMobile)
+}, [])
+```
+
+### 7.8 实时更新
+
+仪表盘使用 WebSocket 实现实时数据更新：
+
+- 后端每 2 秒广播流量统计
+- 自动重连机制
+- 连接状态指示器
+
+```typescript
+// WebSocket 连接示例
+const ws = new WebSocket(`ws://${window.location.host}/ws`)
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data)
+  if (data.type === 'traffic') {
+    setStats(data.data)
+  }
+}
+```
 
 ---
 
@@ -1240,8 +1277,8 @@ Web 控制台全中文界面，包括：
 
 | 协议 | 默认端口 | 说明 |
 |-----|---------|------|
-| HTTP | 809 | 支持 CONNECT 隧道 (HTTPS) |
-| SOCKS5 | 810 | 支持 SOCKS5 协议 |
+| HTTP/HTTPS | 8009 | 支持 CONNECT 隧道 (HTTPS) |
+| SOCKS5 | 8010 | 支持 SOCKS5 协议 |
 | API | 9090 | REST API + Web 控制台 |
 
 ---

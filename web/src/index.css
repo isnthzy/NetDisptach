@@ -2,11 +2,282 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary-color: #1890ff;
+  --primary-hover: #40a9ff;
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+  --error-color: #ff4d4f;
+  --bg-color: #f5f7fa;
+  --card-bg: #ffffff;
+  --text-color: #333333;
+  --text-secondary: #666666;
+  --border-color: #e8e8e8;
+  --border-radius: 8px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --transition: all 0.3s ease;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* Modern Layout */
+.ant-layout {
+  min-height: 100vh;
+  background: var(--bg-color);
 }
 
 .ant-layout-sider {
-  border-right: 1px solid #f0f0f0;
+  border-right: 1px solid var(--border-color);
+  background: var(--card-bg) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.ant-layout-content {
+  padding: 24px;
+  background: var(--bg-color);
+}
+
+/* Modern Cards */
+.ant-card {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-color);
+  transition: var(--transition);
+  background: var(--card-bg);
+}
+
+.ant-card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid var(--border-color);
+  padding: 16px 24px;
+}
+
+.ant-card-body {
+  padding: 24px;
+}
+
+/* Modern Menu */
+.ant-menu {
+  border: none !important;
+}
+
+.ant-menu-item {
+  border-radius: 6px;
+  margin: 4px 8px !important;
+  transition: var(--transition);
+}
+
+.ant-menu-item-selected {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)) !important;
+  color: #fff !important;
+}
+
+.ant-menu-item:hover {
+  background: rgba(24, 144, 255, 0.1);
+}
+
+/* Modern Buttons */
+.ant-btn {
+  border-radius: 6px;
+  transition: var(--transition);
+  font-weight: 500;
+}
+
+.ant-btn-primary {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  border: none;
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
+  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Modern Tables */
+.ant-table {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: rgba(24, 144, 255, 0.05);
+}
+
+/* Modern Modals */
+.ant-modal-content {
+  border-radius: 12px;
+  box-shadow: var(--shadow-hover);
+  overflow: hidden;
+}
+
+.ant-modal-header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 16px 24px;
+}
+
+.ant-modal-body {
+  padding: 24px;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 16px 24px;
+}
+
+/* Modern Form */
+.ant-input,
+.ant-input-number,
+.ant-select-selector,
+.ant-picker {
+  border-radius: 6px !important;
+  transition: var(--transition);
+}
+
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-number:focus,
+.ant-input-number-focused,
+.ant-select-focused .ant-select-selector {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* Modern Tags */
+.ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* Statistics */
+.ant-statistic-title {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.ant-statistic-content {
+  font-weight: 600;
+}
+
+/* Collapse */
+.ant-collapse {
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.ant-collapse-header {
+  font-weight: 500;
+  background: #fafafa;
+}
+
+.ant-collapse-item {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ant-collapse-item:last-child {
+  border-bottom: none;
+}
+
+/* Alert */
+.ant-alert {
+  border-radius: var(--border-radius);
+}
+
+/* Divider */
+.ant-divider {
+  margin: 16px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ant-layout-content {
+    padding: 16px;
+  }
+
+  .ant-card-body {
+    padding: 16px;
+  }
+
+  .ant-col {
+    margin-bottom: 16px;
+  }
+
+  /* Hide sider on mobile - handled by Sidebar component */
+  .ant-layout-sider {
+    display: none;
+  }
+
+  /* Full width cards on mobile */
+  .ant-row > .ant-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+
+  /* Smaller modal on mobile */
+  .ant-modal {
+    max-width: calc(100vw - 32px) !important;
+    margin: 16px auto !important;
+  }
+
+  .ant-modal-content {
+    padding: 0;
+  }
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Selection */
+::selection {
+  background: rgba(24, 144, 255, 0.3);
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
