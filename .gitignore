@@ -28,6 +28,7 @@ logs/
 
 # Local config (keep template)
 configs/config.local.yaml
+AGENTS.local.md
 
 # Temporary files
 *.tmp
