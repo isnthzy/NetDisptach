@@ -120,7 +120,7 @@ function Rules() {
   const handleAdd = () => {
     setEditingRule(null)
     form.resetFields()
-    form.setFieldsValue({ action: 'forward', enabled: true, priority: 100, list_type: 'none' })
+    form.setFieldsValue({ action: 'forward', enabled: true, priority: 50, list_type: 'none' })
     setModalOpen(true)
   }
 
@@ -182,7 +182,7 @@ function Rules() {
   const handleImport = () => {
     setImportSource('url')
     importForm.resetFields()
-    importForm.setFieldsValue({ priority: 100, enabled: true, source_type: 'url' })
+    importForm.setFieldsValue({ priority: 50, enabled: true, source_type: 'url' })
     setSelectedFile(null)
     setImportModalOpen(true)
   }
@@ -341,8 +341,32 @@ function Rules() {
             <Input placeholder="例如：Google服务走代理" />
           </Form.Item>
 
-          <Form.Item name="priority" label="优先级" rules={[{ required: true, message: '请输入优先级' }]}>
-            <InputNumber min={1} max={10000} style={{ width: '100%' }} />
+          <Form.Item
+            name="priority"
+            label="优先级"
+            rules={[
+              { required: true, message: '请输入优先级' },
+              {
+                validator: (_, value) => {
+                  if (value === undefined || value === null || value === '') {
+                    return Promise.resolve()
+                  }
+                  if (value < 0 || value > 100) {
+                    return Promise.reject('优先级必须在 0-100 之间')
+                  }
+                  // 检查优先级重复
+                  const isDuplicate = (rules || []).some((r: Rule) =>
+                    r.priority === value && r.id !== editingRule?.id
+                  )
+                  if (isDuplicate) {
+                    return Promise.reject('优先级已被其他规则使用')
+                  }
+                  return Promise.resolve()
+                }
+              }
+            ]}
+          >
+            <InputNumber min={0} max={100} style={{ width: '100%' }} />
           </Form.Item>
 
           <Form.Item name="enabled" label="启用" valuePropName="checked">
@@ -468,8 +492,32 @@ function Rules() {
             </Select>
           </Form.Item>
 
-          <Form.Item name="priority" label="优先级">
-            <InputNumber min={1} max={10000} style={{ width: '100%' }} />
+          <Form.Item
+            name="priority"
+            label="优先级"
+            rules={[
+              { required: true, message: '请输入优先级' },
+              {
+                validator: (_, value) => {
+                  if (value === undefined || value === null || value === '') {
+                    return Promise.resolve()
+                  }
+                  if (value < 0 || value > 100) {
+                    return Promise.reject('优先级必须在 0-100 之间')
+                  }
+                  // 检查优先级重复
+                  const isDuplicate = (rules || []).some((r: Rule) =>
+                    r.priority === value
+                  )
+                  if (isDuplicate) {
+                    return Promise.reject('优先级已被其他规则使用')
+                  }
+                  return Promise.resolve()
+                }
+              }
+            ]}
+          >
+            <InputNumber min={0} max={100} style={{ width: '100%' }} />
           </Form.Item>
 
           <Form.Item name="enabled" label="启用" valuePropName="checked">

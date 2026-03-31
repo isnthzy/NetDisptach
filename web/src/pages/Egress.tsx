@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, Button, Table, Modal, Form, Input, Select, Switch, Space, message } from 'antd'
+import { Card, Button, Table, Modal, Form, Input, InputNumber, Select, Switch, Space, message } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { egressApi, nicsApi } from '../services/api'
@@ -218,7 +218,7 @@ function Egress() {
                   </Form.Item>
 
                   <Form.Item name="proxyPort" label="代理端口" rules={[{ required: true, message: '请输入代理端口' }]}>
-                    <Input type="number" placeholder="1080" />
+                    <InputNumber min={1} max={65535} style={{ width: '100%' }} placeholder="1080" />
                   </Form.Item>
 
                   <Form.Item name="proxyUsername" label="用户名">
