@@ -5,8 +5,6 @@ vendor/
 # Build outputs
 bin/
 *.exe
-netdispatch
-netdispatch-console
 
 # IDE
 .idea/
