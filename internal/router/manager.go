@@ -1,6 +1,7 @@
 package router
 
 import (
+	"sort"
 	"sync"
 )
 
@@ -101,13 +102,9 @@ func (m *Manager) ClearRules() {
 }
 
 func (m *Manager) sortRules() {
-	for i := 0; i < len(m.rules); i++ {
-		for j := i + 1; j < len(m.rules); j++ {
-			if m.rules[i].Priority > m.rules[j].Priority {
-				m.rules[i], m.rules[j] = m.rules[j], m.rules[i]
-			}
-		}
-	}
+	sort.Slice(m.rules, func(i, j int) bool {
+		return m.rules[i].Priority < m.rules[j].Priority
+	})
 }
 
 // Route makes a routing decision for a target address

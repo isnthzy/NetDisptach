@@ -118,53 +118,41 @@ func (m *Manager) Select(targetAddr string) (*Policy, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	// Helper to find a policy by ID with fallback to default, then first available
+	findPolicy := func(id string) *Policy {
+		if id != "" {
+			if p, ok := m.policies[id]; ok && p != nil {
+				return p
+			}
+		}
+		if p, ok := m.policies[m.defaultPolicy]; ok && p != nil {
+			return p
+		}
+		for _, p := range m.policies {
+			if p != nil {
+				return p
+			}
+		}
+		return nil
+	}
+
 	// If no router manager, use default policy
 	if m.routerMgr == nil {
-		if policy, ok := m.policies[m.defaultPolicy]; ok && policy != nil {
-			return policy, nil
-		}
-		// Return first available policy as fallback
-		for _, policy := range m.policies {
-			if policy != nil {
-				return policy, nil
-			}
+		if p := findPolicy(""); p != nil {
+			return p, nil
 		}
 		return nil, ErrNoPolicyAvailable
 	}
 
-	// Use routerMgr's Route method directly
+	// Use router to make routing decision
 	decision := m.routerMgr.Route(targetAddr)
 
-	switch decision.Action {
-	case router.ActionReject:
+	if decision.Action == router.ActionReject {
 		return nil, ErrConnectionRejected
-	case router.ActionForward:
-		if decision.EgressID != "" {
-			if policy, ok := m.policies[decision.EgressID]; ok && policy != nil {
-				return policy, nil
-			}
-		}
-		// Fallback to default policy
-		if policy, ok := m.policies[m.defaultPolicy]; ok && policy != nil {
-			return policy, nil
-		}
-		// Return first available policy as fallback
-		for _, policy := range m.policies {
-			if policy != nil {
-				return policy, nil
-			}
-		}
-		return nil, ErrNoPolicyAvailable
-	default:
-		if policy, ok := m.policies[m.defaultPolicy]; ok && policy != nil {
-			return policy, nil
-		}
-		// Return first available policy as fallback
-		for _, policy := range m.policies {
-			if policy != nil {
-				return policy, nil
-			}
-		}
-		return nil, ErrNoPolicyAvailable
 	}
+
+	if p := findPolicy(decision.EgressID); p != nil {
+		return p, nil
+	}
+	return nil, ErrNoPolicyAvailable
 }

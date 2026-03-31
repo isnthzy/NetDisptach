@@ -21,6 +21,18 @@ type HTTPHandler struct {
 	ctx *Context
 }
 
+// countWriter wraps an io.Writer and counts bytes written
+type countWriter struct {
+	writer io.Writer
+	count  *int64
+}
+
+func (cw *countWriter) Write(p []byte) (int, error) {
+	n, err := cw.writer.Write(p)
+	*cw.count += int64(n)
+	return n, err
+}
+
 // NewHTTPHandler creates a new HTTP handler
 func NewHTTPHandler(ctx *Context) *HTTPHandler {
 	return &HTTPHandler{ctx: ctx}
@@ -143,15 +155,10 @@ func (h *HTTPHandler) handleHTTP(conn net.Conn, connRecord *connmgr.Connection, 
 	}
 	defer targetConn.Close()
 
-	// Capture request size
-	var reqBuf bytes.Buffer
-	if err := req.Write(&reqBuf); err != nil {
-		log.Debug().Err(err).Msg("Failed to write request to buffer")
-		return
-	}
-	bytesOut := int64(reqBuf.Len())
-
-	if _, err := targetConn.Write(reqBuf.Bytes()); err != nil {
+	// Write request and count bytes using counting writer
+	var bytesOut int64
+	countWriter := &countWriter{writer: targetConn, count: &bytesOut}
+	if err := req.Write(countWriter); err != nil {
 		log.Debug().Err(err).Msg("Failed to write request to target")
 		return
 	}
@@ -163,21 +170,25 @@ func (h *HTTPHandler) handleHTTP(conn net.Conn, connRecord *connmgr.Connection, 
 	}
 	defer resp.Body.Close()
 
-	// Capture response size
-	var respBuf bytes.Buffer
-	if err := resp.Write(&respBuf); err != nil {
-		log.Debug().Err(err).Msg("Failed to write response to buffer")
-		return
-	}
-	bytesIn := int64(respBuf.Len())
+	// Write response headers directly and count bytes
+	var headerBuf bytes.Buffer
+	resp.Header.Write(&headerBuf)
+	headerLine := fmt.Sprintf("HTTP/%d.%d %s\r\n", resp.ProtoMajor, resp.ProtoMinor, resp.Status)
+	headerBytes := len(headerLine) + headerBuf.Len() + 2 // +2 for final \r\n
 
-	if _, err := conn.Write(respBuf.Bytes()); err != nil {
-		log.Debug().Err(err).Msg("Failed to write response to client")
+	if _, err := fmt.Fprintf(conn, "%s%s\r\n", headerLine, headerBuf.String()); err != nil {
+		log.Debug().Err(err).Msg("Failed to write response headers")
 		return
 	}
 
-	// Record traffic
-	h.ctx.ConnMgr.AddBytes(connRecord.ID, bytesIn, bytesOut)
+	// Stream body directly and count bytes
+	bodyBytes, err := io.Copy(conn, resp.Body)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to write response body")
+	}
+
+	bytesIn := int64(headerBytes) + bodyBytes
+	h.ctx.ConnMgr.AddBytes(connRecord.ID, bytesIn, int64(bytesOut))
 
 	log.Info().
 		Str("client", connRecord.ClientAddr).
@@ -186,7 +197,7 @@ func (h *HTTPHandler) handleHTTP(conn net.Conn, connRecord *connmgr.Connection, 
 		Str("method", req.Method).
 		Int("status", resp.StatusCode).
 		Int64("bytes_in", bytesIn).
-		Int64("bytes_out", bytesOut).
+		Int64("bytes_out", int64(bytesOut)).
 		Msg("HTTP request completed")
 }
 
