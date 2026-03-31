@@ -1,0 +1,30 @@
+server:
+    enabled: true
+    bind: 172.38.8.103
+    http:
+        port: 809
+        enabled: true
+    socks5:
+        port: 810
+        enabled: true
+        auth:
+            enabled: false
+            users: []
+nics:
+    default: ""
+    display_names: {}
+egress_policies: []
+routing:
+    default_egress: ""
+    rules: []
+api:
+    bind: 127.0.0.1
+    port: 9090
+    auth:
+        enabled: false
+        username: ""
+        password: ""
+web:
+    enabled: false
+    bind: ""
+    port: 0

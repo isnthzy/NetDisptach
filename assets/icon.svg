@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#60A5FA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34D399;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="url(#bgGrad)"/>
+
+  <!-- Outer ring -->
+  <circle cx="128" cy="128" r="110" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.3"/>
+
+  <!-- Inner core -->
+  <circle cx="128" cy="128" r="35" fill="#1E1B4B" opacity="0.8"/>
+  <circle cx="128" cy="128" r="25" fill="#312E81"/>
+
+  <!-- Routing arrows - main forward arrow -->
+  <path d="M60 128 L180 128" stroke="url(#arrowGrad)" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <polygon points="195,128 165,108 165,148" fill="#34D399"/>
+
+  <!-- Upper branch arrow (going up-right) -->
+  <path d="M100 100 Q 140 70 180 85" stroke="#60A5FA" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <polygon points="190,85 170,70 175,95" fill="#60A5FA"/>
+
+  <!-- Lower branch arrow (going down-right) -->
+  <path d="M100 156 Q 140 186 180 171" stroke="#A78BFA" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <polygon points="190,171 170,156 175,181" fill="#A78BFA"/>
+
+  <!-- Connection dots -->
+  <circle cx="80" cy="128" r="8" fill="#ffffff" opacity="0.9"/>
+  <circle cx="128" cy="128" r="10" fill="#34D399"/>
+
+  <!-- Speed lines -->
+  <line x1="45" y1="115" x2="70" y2="115" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="40" y1="128" x2="65" y2="128" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <line x1="45" y1="141" x2="70" y2="141" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+</svg>
