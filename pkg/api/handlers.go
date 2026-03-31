@@ -13,6 +13,7 @@ import (
 	"netdispatch/internal/egress"
 	"netdispatch/internal/router"
 	"netdispatch/pkg/config"
+	"netdispatch/pkg/version"
 )
 
 // listNICs returns all available NICs
@@ -493,11 +494,14 @@ func (s *Server) applyNICsConfig(cfg *config.NICsConfig) {
 
 // getSystemInfo returns system information
 func (s *Server) getSystemInfo(w http.ResponseWriter, r *http.Request) {
+	v := version.Get()
 	info := map[string]interface{}{
-		"version":    "0.1.0",
-		"go_version": runtime.Version(),
-		"os":         runtime.GOOS,
-		"arch":       runtime.GOARCH,
+		"version":     v.Version,
+		"git_commit":  v.GitCommit,
+		"build_date":  v.BuildDate,
+		"go_version":  runtime.Version(),
+		"os":          runtime.GOOS,
+		"arch":        runtime.GOARCH,
 	}
 
 	respondJSON(w, http.StatusOK, info)

@@ -25,6 +25,7 @@ import (
 	"netdispatch/pkg/config"
 	"netdispatch/pkg/crashlog"
 	"netdispatch/pkg/singleinstance"
+	"netdispatch/pkg/version"
 	"netdispatch/pkg/ws"
 )
 
@@ -32,8 +33,6 @@ import (
 var (
 	// defaultAPIPortStr is the default port for the Web GUI and API server (string for ldflags)
 	defaultAPIPortStr = "9090"
-	// version is the application version
-	version = "0.1.0"
 )
 
 // getParsedAPIPort returns the API port as an integer
@@ -66,7 +65,10 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("NetDispatch v%s\n", version)
+		v := version.Get()
+		fmt.Printf("NetDispatch v%s\n", v.Version)
+		fmt.Printf("Git Commit: %s\n", v.GitCommit)
+		fmt.Printf("Build Date: %s\n", v.BuildDate)
 		fmt.Printf("Default API Port: %d\n", getParsedAPIPort())
 	},
 }

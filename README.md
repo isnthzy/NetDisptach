@@ -2,6 +2,10 @@
 
 **网络调度器** - 高性能多协议代理服务器，支持智能网卡路由。
 
+## 版本
+
+当前版本: **v1.0.0**
+
 ## 功能特性
 
 - **多协议支持**：HTTP、HTTPS、SOCKS5 代理协议
@@ -25,29 +29,37 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/netdispatch.git
-cd netdispatch
+git clone https://github.com/isnthzy/NetDisptach.git
+cd NetDisptach
 
-# 编译（会自动编译前端并嵌入二进制）
+# 使用构建脚本（推荐）
+./build.sh v1.0.0
+
+# 或使用 make
 make build
 ```
 
 ### 自定义编译
 
+#### 指定版本号
+
+```bash
+# 使用构建脚本
+./build.sh v1.0.0
+
+# 或手动指定 ldflags
+go build -ldflags "-s -w \
+    -X netdispatch/pkg/version.Version=1.0.0 \
+    -X netdispatch/pkg/version.GitCommit=$(git rev-parse --short HEAD) \
+    -X netdispatch/pkg/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    -o netdispatch.exe ./cmd/netdispatch
+```
+
 #### 指定 Web 控制台端口
 
 ```bash
 # 编译时指定默认 API 端口（默认 9090）
-make build API_PORT=8080
-
-# 或使用自定义构建命令
-go build -ldflags "-H windowsgui -X 'main.DefaultAPIPort=8080'" -o bin/netdispatch.exe ./cmd/netdispatch
-```
-
-#### 指定版本号
-
-```bash
-make build VERSION=1.0.0
+go build -ldflags "-X main.defaultAPIPortStr=8080" -o netdispatch.exe ./cmd/netdispatch
 ```
 
 ### 跨平台编译
@@ -157,12 +169,12 @@ server:
   bind: "0.0.0.0"
   http:
     enabled: true
-    port: 809
+    port: 8009
   socks5:
     enabled: true
-    port: 810
+    port: 8010
 
-egress:
+egress_policies:
   - id: "direct-eth"
     name: "网线直连"
     nic: "eth0"

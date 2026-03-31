@@ -10,6 +10,8 @@ import {
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { systemApi } from '../services/api'
 
 const items = [
   {
@@ -53,6 +55,13 @@ function Sidebar({ isMobile }: SidebarProps) {
   const location = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  // Fetch version info
+  const { data: systemInfo } = useQuery({
+    queryKey: ['systemInfo'],
+    queryFn: systemApi.getInfo,
+    staleTime: 60000, // Cache for 1 minute
+  })
+
   useEffect(() => {
     // Close drawer on route change
     setDrawerOpen(false)
@@ -70,15 +79,17 @@ function Sidebar({ isMobile }: SidebarProps) {
       <div style={{
         height: '64px',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         borderBottom: '1px solid #f0f0f0',
-        fontWeight: 'bold',
-        fontSize: '18px',
         background: 'linear-gradient(135deg, #1890ff, #40a9ff)',
         color: '#fff',
       }}>
-        NetDispatch
+        <div style={{ fontWeight: 'bold', fontSize: '18px' }}>NetDispatch</div>
+        {systemInfo?.version && (
+          <div style={{ fontSize: '12px', opacity: 0.9 }}>v{systemInfo.version}</div>
+        )}
       </div>
       <Menu
         mode="inline"
@@ -123,6 +134,11 @@ function Sidebar({ isMobile }: SidebarProps) {
           }}>
             NetDispatch
           </span>
+          {systemInfo?.version && (
+            <span style={{ marginLeft: '8px', fontSize: '12px', color: '#999' }}>
+              v{systemInfo.version}
+            </span>
+          )}
         </div>
         <Drawer
           placement="left"
