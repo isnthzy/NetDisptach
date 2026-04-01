@@ -356,8 +356,10 @@ func runServer() {
 		os.Exit(0)
 	}()
 
-	// Run systray in goroutine (required for proper Windows GUI behavior)
-	go tray.Run()
+	// Run systray with external loop on main thread
+	// This prevents menu freeze issues caused by running in a goroutine
+	start, _ := tray.RunExternalLoop()
+	start()
 
 	// Keep main thread alive
 	select {}

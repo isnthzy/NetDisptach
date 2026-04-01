@@ -10,7 +10,9 @@ import (
 
 var (
 	onOpenBrowser func()
-	onQuit        func()
+	onQuit         func()
+	startFunc      func()
+	stopFunc       func()
 )
 
 // SetOnOpenBrowser sets the callback for opening browser
@@ -25,12 +27,27 @@ func SetOnQuit(fn func()) {
 
 // Quit quits the system tray
 func Quit() {
+	if stopFunc != nil {
+		stopFunc()
+	}
 	systray.Quit()
 }
 
-// Run starts the system tray
+// Run starts the system tray (blocking call, should run on main thread)
+// Deprecated: Use RunExternalLoop for better compatibility
 func Run() {
 	systray.Run(onReady, onExit)
+}
+
+// RunExternalLoop starts the system tray with external loop control
+// This is the recommended way to run systray when you have other
+// event loops or need to run it alongside other services.
+// Returns start and stop functions.
+func RunExternalLoop() (start, stop func()) {
+	start, stop = systray.RunWithExternalLoop(onReady, onExit)
+	startFunc = start
+	stopFunc = stop
+	return start, stop
 }
 
 func onReady() {
@@ -78,6 +95,7 @@ func onReady() {
 }
 
 func onExit() {
+	// Cleanup if needed
 }
 
 // openBrowser opens a URL in the default browser
