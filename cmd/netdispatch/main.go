@@ -345,6 +345,25 @@ func runServer() {
 		os.Exit(0)
 	})
 
+	tray.SetStatusChangeCallback(func(running bool) {
+		if running {
+			log.Info().Msg("Starting proxy from tray...")
+			if cfg.Server.HTTP.Enabled {
+				if err := proxyServer.StartHTTP(cfg.Server.Bind, cfg.Server.HTTP.Port); err != nil {
+					log.Error().Err(err).Msg("Failed to start HTTP proxy")
+				}
+			}
+			if cfg.Server.SOCKS5.Enabled {
+				if err := proxyServer.StartSOCKS(cfg.Server.Bind, cfg.Server.SOCKS5.Port); err != nil {
+					log.Error().Err(err).Msg("Failed to start SOCKS5 proxy")
+				}
+			}
+		} else {
+			log.Info().Msg("Stopping proxy from tray...")
+			proxyServer.Stop()
+		}
+	})
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
