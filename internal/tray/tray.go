@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"sync/atomic"
 
 	"github.com/getlantern/systray"
 )
@@ -12,7 +13,7 @@ var (
 	onOpenBrowser         func()
 	onQuit                func()
 	onStatusChange        func(running bool)
-	currentStatus         = "running"
+	currentStatus         int32 = 1 // 1 = running, 0 = stopped
 	mOpen                 *systray.MenuItem
 	mToggle               *systray.MenuItem
 	mQuit                 *systray.MenuItem
@@ -35,10 +36,14 @@ func SetStatusChangeCallback(fn func(running bool)) {
 
 // SetStatus sets the tray icon status ("running" or "stopped")
 func SetStatus(status string) {
-	currentStatus = status
+	if status == "running" {
+		atomic.StoreInt32(&currentStatus, 1)
+	} else {
+		atomic.StoreInt32(&currentStatus, 0)
+	}
 	updateIcon()
 	if mToggle != nil {
-		if currentStatus == "running" {
+		if isRunning() {
 			mToggle.SetTitle("停止代理")
 			mToggle.SetTooltip("停止代理服务")
 		} else {
@@ -46,6 +51,11 @@ func SetStatus(status string) {
 			mToggle.SetTooltip("启动代理服务")
 		}
 	}
+}
+
+// isRunning returns true if the current status is "running"
+func isRunning() bool {
+	return atomic.LoadInt32(&currentStatus) == 1
 }
 
 // Quit quits the system tray
@@ -94,7 +104,7 @@ func onReady() {
 					onOpenBrowser()
 				}
 			case <-mToggle.ClickedCh:
-				if currentStatus == "running" {
+				if isRunning() {
 					SetStatus("stopped")
 					if onStatusChange != nil {
 						onStatusChange(false)
@@ -121,7 +131,7 @@ func onExit() {
 
 // updateIcon updates the tray icon based on current status
 func updateIcon() {
-	if currentStatus == "running" {
+	if isRunning() {
 		systray.SetIcon(IconICO)
 		systray.SetTooltip("NetDispatch 网络调度器 - 运行中")
 	} else {
