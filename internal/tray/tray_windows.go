@@ -322,10 +322,10 @@ func addTrayIcon() {
 
 	if isRunning() {
 		nid.HIcon = hIconRunning
-		copy(nid.SzTip[:], syscall.StringToUTF16("NetDispatch - Running"))
+		copy(nid.SzTip[:], syscall.StringToUTF16("NetDispatch 网络调度器 - 运行中"))
 	} else {
 		nid.HIcon = hIconStopped
-		copy(nid.SzTip[:], syscall.StringToUTF16("NetDispatch - Stopped"))
+		copy(nid.SzTip[:], syscall.StringToUTF16("NetDispatch 网络调度器 - 已停止"))
 	}
 
 	procShellNotifyIconW.Call(NIM_ADD, uintptr(unsafe.Pointer(&nid)))
@@ -346,10 +346,10 @@ func updateTrayIcon() {
 
 	if isRunning() {
 		nid.HIcon = hIconRunning
-		copy(nid.SzTip[:], syscall.StringToUTF16("NetDispatch - Running"))
+		copy(nid.SzTip[:], syscall.StringToUTF16("NetDispatch 网络调度器 - 运行中"))
 	} else {
 		nid.HIcon = hIconStopped
-		copy(nid.SzTip[:], syscall.StringToUTF16("NetDispatch - Stopped"))
+		copy(nid.SzTip[:], syscall.StringToUTF16("NetDispatch 网络调度器 - 已停止"))
 	}
 
 	procShellNotifyIconW.Call(NIM_MODIFY, uintptr(unsafe.Pointer(&nid)))
@@ -418,13 +418,13 @@ func showPopupMenu(hWnd uintptr) {
 	// Create popup menu
 	hMenu, _, _ := procCreatePopupMenu.Call()
 
-	// Add menu items
-	openText, _ := syscall.UTF16PtrFromString("Open Web Console")
-	toggleText, _ := syscall.UTF16PtrFromString("Stop Proxy")
-	quitText, _ := syscall.UTF16PtrFromString("Quit")
+	// Add menu items (Chinese)
+	openText, _ := syscall.UTF16PtrFromString("打开网页")
+	toggleText, _ := syscall.UTF16PtrFromString("停止代理")
+	quitText, _ := syscall.UTF16PtrFromString("退出")
 
 	if !isRunning() {
-		toggleText, _ = syscall.UTF16PtrFromString("Start Proxy")
+		toggleText, _ = syscall.UTF16PtrFromString("启动代理")
 	}
 
 	procAppendMenuW.Call(hMenu, MF_STRING, IDM_OPEN, uintptr(unsafe.Pointer(openText)))
