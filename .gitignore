@@ -50,3 +50,4 @@ assets/icon.txt
 # Frontend build cache
 web/.vite/
 web/dist/
+.worktrees/
