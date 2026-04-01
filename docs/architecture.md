@@ -1009,7 +1009,7 @@ ws.onmessage = (event) => {
 | Config | `gopkg.in/yaml.v3` | YAML 配置解析 |
 | Logging | `github.com/rs/zerolog` | 高性能结构化日志 |
 | CLI | `github.com/spf13/cobra` | 命令行框架 |
-| System Tray | `github.com/getlantern/systray` | 跨平台系统托盘（更好的 Windows 兼容性） |
+| System Tray | Windows: syscall (原生 API) / 其他: `getlantern/systray` | Windows 使用原生 Shell_NotifyIcon 解决右键菜单假死问题 |
 
 ### 8.2 关键实现考虑
 
