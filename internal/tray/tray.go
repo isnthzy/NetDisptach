@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/energye/systray"
+	"github.com/getlantern/systray"
 )
 
 var (
