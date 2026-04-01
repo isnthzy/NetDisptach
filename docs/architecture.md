@@ -1009,7 +1009,7 @@ ws.onmessage = (event) => {
 | Config | `gopkg.in/yaml.v3` | YAML 配置解析 |
 | Logging | `github.com/rs/zerolog` | 高性能结构化日志 |
 | CLI | `github.com/spf13/cobra` | 命令行框架 |
-| System Tray | `fyne.io/systray` | 跨平台系统托盘 |
+| System Tray | `github.com/getlantern/systray` | 跨平台系统托盘（更好的 Windows 兼容性） |
 
 ### 8.2 关键实现考虑
 
