@@ -189,14 +189,16 @@ func Run() {
 }
 
 // RunExternalLoop starts the system tray with external loop control
+// IMPORTANT: On Windows, the message loop must run on the same thread that created the window.
+// This implementation runs everything in a single goroutine to ensure proper message handling.
 func RunExternalLoop() (start, stop func()) {
 	quitChan = make(chan struct{})
 
 	start = func() {
-		initializeTray()
-		running.Store(true)
-		// Run message loop in a separate goroutine
 		go func() {
+			// Initialize AND run message loop in the SAME goroutine
+			initializeTray()
+			running.Store(true)
 			messageLoop()
 			cleanup()
 		}()
