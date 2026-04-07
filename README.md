@@ -6,6 +6,15 @@
 
 当前版本: **v1.0.0**
 
+### 下载发布版本
+
+从 [GitHub Releases](https://github.com/isnthzy/NetDisptach/releases) 下载最新版本：
+
+| 平台 | 文件 |
+|------|------|
+| Windows (amd64) | `netdispatch-windows-amd64.exe` |
+| Linux (amd64) | `netdispatch-linux-amd64` |
+
 ## 功能特性
 
 - **多协议支持**：HTTP、HTTPS、SOCKS5 代理协议
@@ -94,25 +103,30 @@ api:
 ### 运行
 
 ```bash
-# Windows 双击启动 (从资源管理器双击，控制台会自动隐藏)
-双击 bin\netdispatch.exe
-
-# 或使用启动脚本
-双击 bin\启动NetDispatch.bat
-
-# 命令行运行 (控制台保持可见，可查看日志)
-./bin/netdispatch start
+# Windows 命令行启动 (推荐，可查看日志)
+./netdispatch.exe start
 
 # 指定配置文件
-./bin/netdispatch start -c configs/config.yaml
+./netdispatch.exe start -c configs/config.yaml
+
+# 查看版本
+./netdispatch.exe version
 ```
 
-程序启动后会自动打开 Web 控制台，或通过系统托盘图标访问。
+程序启动后：
+1. 自动创建系统托盘图标
+2. 首次运行时自动创建默认配置文件
+3. 可通过托盘图标或浏览器访问 Web 控制台
+
+> **注意**：Windows 下建议在命令行中启动程序，以便查看实时日志输出。双击启动会隐藏控制台窗口。
 
 ### 启动行为说明
 
-- **双击启动**：控制台窗口自动隐藏，仅显示系统托盘图标
-- **命令行启动**：控制台窗口保持可见，可实时查看日志输出
+| 启动方式 | 控制台行为 | 推荐场景 |
+|---------|----------|---------|
+| 命令行启动 | 窗口可见，实时日志 | 日常使用、问题排查 |
+| 双击启动 | 窗口隐藏，仅托盘 | 后台运行 |
+
 - **单实例限制**：程序仅允许运行一个实例，重复启动会弹出提示框
 
 ## 核心概念

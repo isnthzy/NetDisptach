@@ -1640,9 +1640,107 @@ func isLoopAddress(host string, port int, serverCfg *ServerConfig) bool {
 
 ---
 
-## 22. 项目文件索引
+## 22. GitHub Actions 自动发布
 
-### 22.1 核心文件
+### 22.1 功能说明
+
+项目使用 GitHub Actions 实现自动构建和发布。当推送格式为 `v*.*.*` 的 Git Tag 时，自动触发构建流程。
+
+### 22.2 触发条件
+
+```bash
+# 创建并推送 tag 触发发布
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+### 22.3 构建流程
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   GitHub Actions Release                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. 检出代码 (fetch-depth: 0 获取完整历史)                    │
+│      │                                                       │
+│      ▼                                                       │
+│  2. 构建前端 (npm install && npm run build)                  │
+│      │                                                       │
+│      ▼                                                       │
+│  3. 生成 Changelog (从 git commits)                          │
+│      │                                                       │
+│      ▼                                                       │
+│  4. 构建二进制                                                │
+│      ├─ Windows amd64 (netdispatch-windows-amd64.exe)       │
+│      └─ Linux amd64 (netdispatch-linux-amd64)               │
+│      │                                                       │
+│      ▼                                                       │
+│  5. 创建 GitHub Release                                       │
+│      ├─ 上传二进制文件                                        │
+│      └─ 包含 Changelog                                        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 22.4 构建产物
+
+| 平台 | 架构 | 文件名 |
+|------|------|--------|
+| Windows | amd64 | `netdispatch-windows-amd64.exe` |
+| Linux | amd64 | `netdispatch-linux-amd64` |
+
+### 22.5 版本信息注入
+
+编译时通过 ldflags 注入版本信息：
+
+```bash
+go build -ldflags "-s -w \
+    -X main.defaultAPIPortStr=9090 \
+    -X netdispatch/pkg/version.Version=v1.0.0 \
+    -X netdispatch/pkg/version.GitCommit=$(git rev-parse HEAD) \
+    -X netdispatch/pkg/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+```
+
+### 22.6 默认配置嵌入
+
+二进制文件包含嵌入的默认配置 (`pkg/config/default.yaml`)。
+
+首次启动时，如果配置文件不存在，会自动创建：
+
+| 平台 | 配置路径 |
+|------|----------|
+| Windows | `%APPDATA%/NetDispatch/config.yaml` |
+| Linux | `~/.config/NetDispatch/config.yaml` |
+| macOS | `~/.config/NetDispatch/config.yaml` |
+
+### 22.7 工作流文件
+
+```
+.github/
+└── workflows/
+    └── release.yml    # 发布工作流定义
+```
+
+### 22.8 发布注意事项
+
+1. **本地测试**：发布前先本地构建测试
+   ```bash
+   ./build.sh v1.0.0
+   ./netdispatch.exe start
+   ```
+
+2. **版本命名**：使用语义化版本 `vMAJOR.MINOR.PATCH`
+   - MAJOR: 不兼容的 API 变更
+   - MINOR: 向后兼容的新功能
+   - PATCH: Bug 修复
+
+3. **检查 Actions**：推送 tag 后检查 GitHub Actions 日志
+
+---
+
+## 23. 项目文件索引
+
+### 23.1 核心文件
 
 | 文件 | 描述 |
 |------|------|
@@ -1652,7 +1750,7 @@ func isLoopAddress(host string, port int, serverCfg *ServerConfig) bool {
 | `docs/build-guide.md` | 编译指南 |
 | `configs/config.yaml` | 示例配置文件 |
 
-### 22.2 后端关键模块
+### 23.2 后端关键模块
 
 | 路径 | 描述 |
 |------|------|
@@ -1670,7 +1768,7 @@ func isLoopAddress(host string, port int, serverCfg *ServerConfig) bool {
 | `pkg/version/version.go` | 版本信息 |
 | `pkg/ws/hub.go` | WebSocket Hub |
 
-### 22.3 前端关键文件
+### 23.3 前端关键文件
 
 | 路径 | 描述 |
 |------|------|
@@ -1685,7 +1783,24 @@ func isLoopAddress(host string, port int, serverCfg *ServerConfig) bool {
 
 ---
 
-## 23. 变更日志
+## 24. 变更日志
+
+### v1.1.0 (2026-04-07)
+
+**新功能**：
+- GitHub Actions 自动发布工作流
+- 默认配置文件嵌入二进制，首次启动自动创建
+- Claude Code Skills 系统（`.claude/skills/`）
+
+**改进**：
+- AI 配置整合到 `.claude/` 目录，支持多 AI 工具
+- README 添加 GitHub Releases 下载说明
+- README 添加 Windows 命令行启动建议
+
+**文档**：
+- 新增 `release.md` skill（发布流程指南）
+- 新增 `project-context.md` skill（项目上下文）
+- 更新架构文档添加 GitHub Actions 章节
 
 ### v1.0.0 (2026-03-31)
 

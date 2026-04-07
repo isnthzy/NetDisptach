@@ -1,10 +1,14 @@
 package config
 
 import (
+	"embed"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed default.yaml
+var defaultConfigFS embed.FS
 
 // DefaultAPIPort is the default port for the Web GUI and API server
 // Can be overridden at compile time via ldflags
@@ -168,22 +172,36 @@ func DefaultConfig() *Config {
 }
 
 // Load loads configuration from file
+// If the file doesn't exist, it creates one from the embedded default config
 func Load(path string) (*Config, error) {
-	cfg := DefaultConfig()
-
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return cfg, nil
+			// Create config file from embedded default
+			if createErr := createDefaultConfigFile(path); createErr != nil {
+				// Log warning but continue with in-memory default
+				// User can still use the app and save config later
+			}
+			return DefaultConfig(), nil
 		}
 		return nil, err
 	}
 
+	cfg := DefaultConfig()
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, err
 	}
 
 	return cfg, nil
+}
+
+// createDefaultConfigFile creates a default config file from embedded template
+func createDefaultConfigFile(path string) error {
+	data, err := defaultConfigFS.ReadFile("default.yaml")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
 }
 
 // Save saves configuration to file

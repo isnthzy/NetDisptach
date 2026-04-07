@@ -1,0 +1,37 @@
+server:
+    enabled: true
+    bind: ""  # Auto-select: Ethernet first, then WLAN
+    http:
+        port: 8009
+        enabled: true
+    socks5:
+        port: 8010
+        enabled: true
+        auth:
+            enabled: false
+            users: []
+nics:
+    default: ""
+    display_names: {}
+egress_policies: []
+routing:
+    default_egress: ""
+    rules:
+      - id: "default-catch-all"
+        name: "默认规则"
+        priority: 100
+        enabled: true
+        list_type: "none"
+        domains:
+          - "*"
+        cidrs: []
+        ports: []
+        action: "forward"
+        egress_id: ""
+api:
+    bind: 127.0.0.1
+    port: 9090
+    auth:
+        enabled: false
+        username: ""
+        password: ""
