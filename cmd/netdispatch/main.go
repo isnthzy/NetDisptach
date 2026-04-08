@@ -410,14 +410,33 @@ func autoSelectBindAddress(nicMgr *nic.Manager) string {
 		}
 
 		nameLower := strings.ToLower(n.Name)
-		if strings.Contains(nameLower, "eth") || strings.Contains(nameLower, "以太") || strings.Contains(nameLower, "网线") {
-			if ethernetIP == "" {
-				ethernetIP = n.IP
-			}
-		} else if strings.Contains(nameLower, "wlan") || strings.Contains(nameLower, "wifi") {
-			if wlanIP == "" {
-				wlanIP = n.IP
-			}
+
+		// Ethernet patterns (cross-platform)
+		// Windows: 以太, 网线, ethernet
+		// Linux: eth, enp, ens, eno, enx (enp0s3, ens33, etc.)
+		isEthernet := strings.Contains(nameLower, "eth") ||
+			strings.Contains(nameLower, "enp") ||
+			strings.Contains(nameLower, "ens") ||
+			strings.Contains(nameLower, "eno") ||
+			strings.Contains(nameLower, "enx") ||
+			strings.Contains(nameLower, "以太") ||
+			strings.Contains(nameLower, "网线") ||
+			strings.Contains(nameLower, "ethernet")
+
+		// Wireless patterns (cross-platform)
+		// Windows: wlan, wifi
+		// Linux: wlp, wlo, wlx, wlan (wlp2s0, wlo1, etc.)
+		isWireless := strings.Contains(nameLower, "wlan") ||
+			strings.Contains(nameLower, "wlp") ||
+			strings.Contains(nameLower, "wlo") ||
+			strings.Contains(nameLower, "wlx") ||
+			strings.Contains(nameLower, "wifi") ||
+			strings.Contains(nameLower, "无线")
+
+		if isEthernet && ethernetIP == "" {
+			ethernetIP = n.IP
+		} else if isWireless && wlanIP == "" {
+			wlanIP = n.IP
 		}
 		if n.IsDefault && defaultIP == "" {
 			defaultIP = n.IP

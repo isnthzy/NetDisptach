@@ -1785,6 +1785,15 @@ go build -ldflags "-s -w \
 
 ## 24. 变更日志
 
+### v1.2.0 (2026-04-08)
+
+**修复**：
+- Linux 网卡自动识别：添加 `enp`、`ens`、`eno`、`enx`、`wlp`、`wlo`、`wlx` 等模式，支持 Ubuntu 等发行版的可预测网卡命名
+- Windows 进程检测：使用 Windows API `OpenProcess` + `GetExitCodeProcess` 正确检测进程是否存在
+
+**改进**：
+- 单实例检测添加调试日志，便于诊断启动问题
+
 ### v1.1.0 (2026-04-07)
 
 **新功能**：

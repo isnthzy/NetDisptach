@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 // LockFile holds the lock file handle
@@ -27,10 +29,13 @@ func Acquire(appName string, apiPort int) (func(), error) {
 
 	// Check if lock file exists and has a running process
 	if pid, err := readPID(lockPath); err == nil {
+		log.Debug().Int("pid", pid).Str("path", lockPath).Msg("Found existing lock file")
 		if isProcessRunning(pid) {
+			log.Warn().Int("pid", pid).Msg("Another instance is still running")
 			return nil, fmt.Errorf("another instance of %s is already running (PID: %d)", appName, pid)
 		}
 		// Process is not running, clean up stale lock file
+		log.Info().Int("pid", pid).Msg("Stale lock file found, cleaning up")
 		os.Remove(lockPath)
 	}
 
@@ -44,6 +49,7 @@ func Acquire(appName string, apiPort int) (func(), error) {
 	err = tryLock(f)
 	if err != nil {
 		f.Close()
+		log.Warn().Msg("Failed to acquire file lock - another instance is running")
 		return nil, fmt.Errorf("another instance of %s is already running", appName)
 	}
 
@@ -54,6 +60,7 @@ func Acquire(appName string, apiPort int) (func(), error) {
 	fmt.Fprintf(f, "%d\n", pid)
 
 	lockFile = f
+	log.Info().Int("pid", pid).Str("path", lockPath).Msg("Acquired single instance lock")
 	return release, nil
 }
 
@@ -89,6 +96,7 @@ func readPID(path string) (int, error) {
 // release releases the single instance lock
 func release() {
 	if lockFile != nil {
+		log.Debug().Str("path", lockPath).Msg("Releasing single instance lock")
 		unlock(lockFile)
 		lockFile.Close()
 		os.Remove(lockPath)
